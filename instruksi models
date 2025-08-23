@@ -1,0 +1,35 @@
+# Membuat Model dan file Migrasi
+php artisan make:model Category -m
+php artisan make:model Status -m
+php artisan make:model Employee -m
+php artisan make:model Vendor -m
+php artisan make:model Product -m
+php artisan make:model ProductPengurangan -m
+php artisan make:model ProductVendor -m
+php artisan make:model Prospect -m
+php artisan make:model Order -m
+php artisan make:model OrderProduct -m
+php artisan make:model PaymentMethod -m
+php artisan make:model DataPembayaran -m
+php artisan make:model DataPribadi -m
+php artisan make:model Expense -m
+php artisan make:model ExpenseOps -m
+php artisan make:model BankStatement -m
+php artisan make:model SimulasiProduk -m
+
+php artisan make:filament-resource Category --generate
+php artisan make:filament-resource Vendor --generate
+php artisan make:filament-resource Product --generate
+php artisan make:filament-resource Prospect --generate
+php artisan make:filament-resource Order --generate
+php artisan make:filament-resource Expense --generate
+php artisan make:filament-resource ExpenseOps --generate
+php artisan make:filament-resource PaymentMethod --generate
+php artisan make:filament-resource DataPembayaran --generate
+php artisan make:filament-resource DataPribadi --generate
+php artisan make:filament-resource BankStatement --generate
+php artisan make:filament-resource SimulasiProduk --generate
+php artisan make:filament-resource Status --generate
+php artisan make:filament-resource Employee --generate
+php artisan make:filament-resource User --generate
+
