@@ -279,7 +279,7 @@ class UserResource extends Resource
                     ->searchable(),
                 
                 Tables\Columns\ImageColumn::make('avatar_url')
-                    ->label('Avatar')
+                    ->label('Foto Profil')
                     ->defaultImageUrl(function ($record) {
                         // Generate default avatar based on user's name initials
                         $name = $record->name ?? 'User';
