@@ -8,10 +8,10 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts - Poppins -->
+    <!-- Google Fonts - Noto Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     
     <!-- Tailwind Config -->
     <script>
@@ -19,8 +19,8 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        'poppins': ['Poppins', 'sans-serif'],
-                        'sans': ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        'noto-sans': ['Noto Sans', 'sans-serif'],
+                        'sans': ['Noto Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
                     }
                 }
             }
@@ -30,11 +30,11 @@
     <style>
         /* Override font for all elements */
         * {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
         }
         
         body {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
         }
         
         @media print {
@@ -169,7 +169,7 @@
                 <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                     🖨️ Print
                 </button>
-                <button onclick="window.history.back()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                <button onclick="goBack()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
                     ← Kembali
                 </button>
             </div>
@@ -337,6 +337,17 @@
     </div>
 
     <script>
+        // Function to handle back button with fallback
+        function goBack() {
+            // Check if there's history to go back to and if the previous page is from the same domain
+            if (window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.hostname) !== -1) {
+                window.history.back();
+            } else {
+                // Fallback: redirect to Filament SOP resource or admin dashboard
+                window.location.href = '/admin/sops';
+            }
+        }
+        
         // Auto print if print parameter is present
         @if($isPrint ?? false)
             window.onload = function() {

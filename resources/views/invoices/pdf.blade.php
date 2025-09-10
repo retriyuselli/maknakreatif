@@ -354,7 +354,7 @@
     @if ($order->is_paid)
         <div class="watermark paid">Paid</div>
     @else
-        <div class="watermark pending">Pending</div>
+        <div class="watermark pending">Partial Paid</div>
     @endif
 
     <!-- Header -->

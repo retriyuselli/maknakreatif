@@ -23,7 +23,7 @@ class ListUsers extends ListRecords
     {
         return [
             UserExpirationOverview::class,
-            AccountManagerStats::class,
+            // AccountManagerStats::class,
         ];
     }
 }

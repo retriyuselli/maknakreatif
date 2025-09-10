@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); //
             $table->foreignId('order_id')->nullable()->constrained('orders')->onDelete('set null'); //
             $table->foreignId('vendor_id')->nullable()->constrained('vendors')->onDelete('set null'); //
             $table->foreignId('payment_method_id')->nullable()->constrained('payment_methods')->onDelete('set null'); //

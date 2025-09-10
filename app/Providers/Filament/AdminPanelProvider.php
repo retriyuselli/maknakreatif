@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->font('Noto Sans')
             ->login()
+            ->favicon('images/Favicon Wofins.png')
             ->sidebarCollapsibleOnDesktop(true)
             ->colors([
                 'primary' => Color::Purple,

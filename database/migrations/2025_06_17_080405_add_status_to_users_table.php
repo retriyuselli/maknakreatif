@@ -13,11 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Tambahkan kolom 'status' setelah kolom 'password'
-            // Anda bisa membuatnya nullable atau memberikan nilai default
-            $table->string('status')
-                  ->nullable() // Atau ->default(UserStatusEnum::KARYAWAN->value) jika Anda ingin default
-                  ->after('password'); 
+            $table->enum('status', ['active', 'inactive', 'terminated'])
+                ->default('active')
+                ->after('password');
         });
     }
 

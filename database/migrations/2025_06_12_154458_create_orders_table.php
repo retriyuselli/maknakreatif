@@ -30,6 +30,7 @@ return new class extends Migration
             $table->decimal('penambahan', 15, 2)->default(0);
             $table->decimal('pengurangan', 15, 2)->default(0);
             $table->decimal('change_amount', 15, 2)->default(0);
+            $table->decimal('grand_total', 15, 2)->nullable();
             $table->json('bukti')->nullable();
             $table->boolean('is_paid')->default(false);
             $table->date('closing_date')->nullable();

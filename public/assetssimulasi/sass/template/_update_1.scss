@@ -1,5 +1,5 @@
 .color_blue {
-    --smoke-dark : #2D7CFE;
+    --smoke-dark: #2d7cfe;
     th {
         color: $white-color;
     }
@@ -44,21 +44,21 @@
     }
 }
 
-/*---------- Dark Mode ----------*/ 
+/*---------- Dark Mode ----------*/
 .dark_mode {
     --white-color: #111111;
     --title-color: #fff;
-    --body-color: #E7E9ED;
-    --smoke-color: #1A2733;
-    --smoke-dark: #2D7CFE;
-    --border-color: #1A2733;
+    --body-color: #e7e9ed;
+    --smoke-color: #1a2733;
+    --smoke-dark: #2d7cfe;
+    --border-color: #1a2733;
     address,
     td {
         color: $body-color;
     }
     .address-box {
         background-color: $smoke-color;
-        --border-color: #323D45;
+        --border-color: #323d45;
     }
     .print_btn {
         color: $theme-color;

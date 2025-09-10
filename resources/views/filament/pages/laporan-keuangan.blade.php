@@ -41,7 +41,7 @@
                             Kunci</label>
                         <input type="text" id="filter_keyword" wire:model.defer="filter_keyword"
                             class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500"
-                            placeholder="Cari deskripsi..." />
+                            placeholder="Cari deskripsi, vendor, event..." />
                     </div> {{-- Action Buttons --}}
                     <div class="flex items-center gap-x-3">
                         <x-filament::button type="submit">
@@ -110,6 +110,7 @@
                         <th scope="col" class="px-6 py-3">Tanggal</th>
                         <th scope="col" class="px-6 py-3">Jenis</th>
                         <th scope="col" class="px-6 py-3">Deskripsi</th>
+                        <th scope="col" class="px-6 py-3">Vendor</th>
                         <th scope="col" class="px-6 py-3">Prospect/Event</th>
                         <th scope="col" class="px-6 py-3">Rekening</th>
                         <th scope="col" class="px-6 py-3 text-right">Jumlah</th>
@@ -125,7 +126,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span @class([
-                                    'inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium',
+                                    'inline-flex items-center px-0 py-0 rounded-md text-xs font-medium',
                                     'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' => str_contains(
                                         $item->jenis,
                                         'Masuk'),
@@ -136,9 +137,18 @@
                                     {{ $item->jenis }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4">{{ $item->deskripsi }}</td>
-                            <td class="px-6 py-4">{{ $item->prospect_name ?? '-' }}</td>
-                            <td class="px-6 py-4">{{ $item->payment_method_details ?? '-' }}</td>
+                            <td class="px-6 py-4 text-xs">{{ $item->deskripsi }}</td>
+                            <td class="px-6 py-4">
+                                @if($item->vendor_name)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                        {{ $item->vendor_name }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 text-xs">{{ $item->prospect_name ?? '-' }}</td>
+                            <td class="px-6 py-4 text-xs ">{{ $item->payment_method_details ?? '-' }}</td>
                             <td
                                 class="px-6 py-4 font-medium text-gray-900 dark:text-white text-right whitespace-nowrap">
                                 Rp {{ number_format($item->jumlah, 0, ',', '.') }}
@@ -150,7 +160,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="flex flex-col items-center justify-center text-center py-12">
                                     <div class="mb-4">
                                         <x-heroicon-o-circle-stack class="w-12 h-12 text-gray-400" />

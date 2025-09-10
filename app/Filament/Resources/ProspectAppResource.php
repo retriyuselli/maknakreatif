@@ -137,21 +137,43 @@ class ProspectAppResource extends Resource
                         ->required(),
 
                     Select::make('service')
-                        ->label('Services Interested In')
+                        ->label('Service Package')
                         ->options([
-                            'wofins' => 'Wofins Planning',
-                            'eo_management' => 'EO Management',
+                            'basic' => 'Basic Package - Coming Soon',
+                            'standard' => 'Standard Package - Rp 8,500,000', 
+                            'premium' => 'Premium Package - Coming Soon',
+                            'enterprise' => 'Enterprise Package - Coming Soon',
                         ])
-                        ->placeholder('Select services of interest')
-                        ->helperText('Select all services that apply'),
+                        ->placeholder('Select service package')
+                        ->helperText('Choose the service package that best fits your needs')
+                        ->live()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            // Auto-update harga and bayar based on selected service
+                            match ($state) {
+                                'standard' => [
+                                    $set('harga', 8500000),
+                                    $set('bayar', 8500000)
+                                ],
+                                'basic', 'premium', 'enterprise' => [
+                                    $set('harga', null),
+                                    $set('bayar', null)
+                                ],
+                                default => [
+                                    $set('harga', null),
+                                    $set('bayar', null)
+                                ],
+                            };
+                        }),
 
                     TextInput::make('harga')
                         ->label('Estimated Budget')
                         ->numeric()
-                        ->prefix('Rp. ')
-                        ->placeholder('Enter estimated budget (optional)')
-                        ->helperText('Optional'),
-
+                        ->prefix('Rp ')
+                        ->placeholder('Price will be set automatically based on package')
+                        ->helperText('Budget will be auto-filled when you select a service package')
+                        ->dehydrated()
+                        ->readOnly(),
+                        
                     DatePicker::make('tgl_bayar')
                         ->label('Payment Date')
                         ->displayFormat('d M Y')
@@ -160,17 +182,18 @@ class ProspectAppResource extends Resource
                     TextInput::make('bayar')
                         ->label('Amount Paid')
                         ->numeric()
-                        ->prefix('Rp. ')
-                        ->helperText('If a payment has been made, specify the amount'),
+                        ->prefix('Rp ')
+                        ->helperText('If a payment has been made, specify the amount')
+                        ->dehydrated(),
 
-                        RichEditor::make('notes')
-                            ->label('Internal Notes')
-                            ->placeholder('Add any internal notes or comments'),
+                    RichEditor::make('notes')
+                        ->label('Internal Notes')
+                        ->placeholder('Add any internal notes or comments'),
 
-                        DateTimePicker::make('submitted_at')
-                            ->label('Submission Date & Time')
-                            ->default(now())
-                            ->displayFormat('M j, Y H:i'),
+                    DateTimePicker::make('submitted_at')
+                        ->label('Submission Date & Time')
+                        ->default(now())
+                        ->displayFormat('M j, Y H:i'),
                     ])
                     ->columns(1),
             ]);
@@ -225,6 +248,31 @@ class ProspectAppResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => ucfirst($state)),
+
+                TextColumn::make('service')
+                    ->label('Service Package')
+                    ->badge()
+                    ->color('primary')
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('harga')
+                    ->label('Budget')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('bayar')
+                    ->label('Paid Amount')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('tgl_bayar')
+                    ->label('Payment Date')
+                    ->date('M j, Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('user_size')
                     ->label('Company Size')

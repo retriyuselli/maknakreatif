@@ -19,10 +19,19 @@ class PengeluaranLain extends Model
         'no_nd',
         'note',
         'kategori_transaksi',
+        // NotaDinas integration fields
+        'nota_dinas_id',
+        'nota_dinas_detail_id',
+        'vendor_id',
+        'bank_name',
+        'account_holder',
+        'bank_account',
+        'tanggal_transfer',
     ];
 
     protected $casts = [
         'date_expense' => 'date',
+        'tanggal_transfer' => 'date',
         'amount' => 'decimal:2',
         'kategori_transaksi' => 'string',
     ];
@@ -48,6 +57,22 @@ class PengeluaranLain extends Model
     public function paymentMethod()
     {
         return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
+    }
+
+    // NotaDinas integration relationships
+    public function notaDinas()
+    {
+        return $this->belongsTo(NotaDinas::class, 'nota_dinas_id');
+    }
+
+    public function notaDinasDetail()
+    {
+        return $this->belongsTo(NotaDinasDetail::class, 'nota_dinas_detail_id');
+    }
+
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
     public function getPaymentMethodNameAttribute(): string

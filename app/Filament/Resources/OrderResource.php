@@ -48,6 +48,45 @@ class OrderResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-s-shopping-cart';
     protected static ?int $navigationSort = 1;
 
+    /**
+     * Safely convert any value to float for calculations
+     */
+    private static function safeFloatVal($value): float
+    {
+        if (is_null($value)) {
+            return 0.0;
+        }
+        
+        if (is_numeric($value)) {
+            return floatval($value);
+        }
+        
+        if (is_string($value)) {
+            // Remove any non-numeric characters except dots and commas
+            $cleaned = preg_replace('/[^\d.,]/', '', $value);
+            // Remove commas (thousand separators)
+            $cleaned = str_replace(',', '', $cleaned);
+            // Handle empty string after cleaning
+            if ($cleaned === '' || $cleaned === '.') {
+                return 0.0;
+            }
+            return floatval($cleaned);
+        }
+        
+        if (is_array($value)) {
+            // If somehow we get an array, return 0
+            Log::warning('Received array value in safeFloatVal', ['value' => $value]);
+            return 0.0;
+        }
+        
+        // Fallback for any other data type
+        Log::warning('Unexpected data type in safeFloatVal', [
+            'value' => $value,
+            'type' => gettype($value)
+        ]);
+        return 0.0;
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -123,6 +162,10 @@ class OrderResource extends Resource
                             ->options(OrderStatus::class)
                             ->label('Status Pesanan')
                             ->required(),
+                        Forms\Components\RichEditor::make('note')
+                            ->label('Keterangan Tambahan')
+                            ->fileAttachmentsDirectory('orders')
+                            ->fileAttachmentsDisk('public'),
                         Forms\Components\FileUpload::make('doc_kontrak')
                             ->label('Upload Kontrak')
                             ->reorderable()
@@ -132,11 +175,6 @@ class OrderResource extends Resource
                             ->directory('doc_kontrak')
                             ->downloadable()
                             ->acceptedFileTypes(['application/pdf']),
-                        Forms\Components\RichEditor::make('note')
-                            ->label('Keterangan Tambahan')
-                            ->toolbarButtons(['attachFiles', 'blockquote', 'bold', 'bulletList', 'codeBlock', 'h2', 'h3', 'italic', 'link', 'orderedList', 'redo', 'strike', 'underline', 'undo'])
-                            ->fileAttachmentsDirectory('orders')
-                            ->fileAttachmentsDisk('public'),
                     ]),
 
                 Wizard\Step::make('Detail Pembayaran')
@@ -145,7 +183,7 @@ class OrderResource extends Resource
                     ->schema([
                         Forms\Components\Section::make('Product dipesan')
                             ->schema([self::getItemsRepeater()]),
-                            
+
                         Forms\Components\Section::make('Data Pembayaran')
                             ->schema([
                                 Forms\Components\Repeater::make('Jika Ada Pembayaran')
@@ -237,11 +275,11 @@ class OrderResource extends Resource
                             ->reactive()
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (Get $get, Set $set) {
-                                // Recalculate grand_total first
-                                $total_price = floatval(str_replace(',', '', $get('total_price') ?? '0'));
-                                $pengurangan_val = floatval(str_replace(',', '', $get('pengurangan') ?? '0'));
-                                $promo_val = floatval(str_replace(',', '', $get('promo') ?? '0'));
-                                $penambahan_val = floatval(str_replace(',', '', $get('penambahan') ?? '0'));
+                                // Recalculate grand_total first with safe conversion
+                                $total_price = self::safeFloatVal($get('total_price'));
+                                $pengurangan_val = self::safeFloatVal($get('pengurangan'));
+                                $promo_val = self::safeFloatVal($get('promo'));
+                                $penambahan_val = self::safeFloatVal($get('penambahan'));
                                 $grandTotal = $total_price + $penambahan_val - $promo_val - $pengurangan_val;
                                 $set('grand_total', $grandTotal);
                                 self::updateDependentFinancialFields($get, $set);
@@ -257,10 +295,11 @@ class OrderResource extends Resource
                             ->reactive()
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (Get $get, Set $set) {
-                                $total_price = floatval(str_replace(',', '', $get('total_price') ?? '0'));
-                                $pengurangan_val = floatval(str_replace(',', '', $get('pengurangan') ?? '0'));
-                                $promo_val = floatval(str_replace(',', '', $get('promo') ?? '0'));
-                                $penambahan_val = floatval(str_replace(',', '', $get('penambahan') ?? '0'));
+                                // Use safe conversion for all financial calculations
+                                $total_price = self::safeFloatVal($get('total_price'));
+                                $pengurangan_val = self::safeFloatVal($get('pengurangan'));
+                                $promo_val = self::safeFloatVal($get('promo'));
+                                $penambahan_val = self::safeFloatVal($get('penambahan'));
                                 $grandTotal = $total_price + $penambahan_val - $promo_val - $pengurangan_val;
                                 $set('grand_total', $grandTotal);
                                 self::updateDependentFinancialFields($get, $set);
@@ -299,6 +338,7 @@ class OrderResource extends Resource
                                     ->helperText('Grand Total (Paket Awal - Pengurangan)')
                                     ->default(0)
                                     ->numeric()
+                                    ->dehydrated(true)
                                     ->prefix('Rp')
                                     ->mask(RawJs::make('$money($input)'))
                                     ->stripCharacters(','),
@@ -410,105 +450,414 @@ class OrderResource extends Resource
                     ->icon('heroicon-o-book-open')
                     ->description('Catat detail pengeluaran')
                     ->schema([
-                        Forms\Components\Section::make('Pengeluaran')->schema([
+                        Forms\Components\Section::make('Pengeluaran')
+                            ->description('Catat pengeluaran ke vendor. Setiap vendor hanya boleh dipilih satu kali per order.')
+                            ->schema([
                             Forms\Components\Repeater::make('expenses')
                                 ->relationship('expenses')
+                                ->live() // Enable live updates for anti-duplicate across items
                                 ->schema([
                                     Forms\Components\Grid::make(3)
                                         ->schema([
-                                            Forms\Components\Select::make('vendor_id')
-                                                ->relationship(
-                                                    name: 'vendor',
-                                                    titleAttribute: 'name',
-                                                    // Filter untuk hanya menampilkan vendor dengan status 'vendor'
-                                                    // modifyQueryUsing: fn (Builder $query) => $query->where('status', 'vendor')
-                                                )
-                                                ->required()
-                                                ->searchable()
-                                                ->preload()
-                                                ->columnSpan(1),
+                                            Forms\Components\Select::make('nota_dinas_id')
+                                                ->label('Nota Dinas')
+                                                ->options(function (callable $get) {
+                                                    $orderId = $get('../../id');
 
-                                            Forms\Components\TextInput::make('no_nd')
-                                                ->required()->prefix('ND-0')
-                                                ->label('Nomor Nota Dinas')
-                                                ->numeric()
-                                                ->columnSpan(1),
+                                                    if (!$orderId) return [];
 
-                                            Forms\Components\Select::make('kategori_transaksi')
-                                                ->options([
-                                                    'uang_masuk' => 'Uang Masuk',
-                                                    'uang_keluar' => 'Uang Keluar',
-                                                ])
-                                                ->default('uang_keluar')
-                                                ->label('Tipe Transaksi')
-                                                ->required(),
-                                            Forms\Components\TextInput::make('note')
-                                                ->required()
-                                                ->label('Keterangan pembayaran')
-                                                ->maxLength(255),
-
-                                            Forms\Components\DatePicker::make('date_expense')
-                                                ->required()
-                                                ->label('Tanggal pembayaran')
-                                                ->columnSpan(1),
-
-                                            Forms\Components\TextInput::make('amount')
-                                                ->required()
-                                                ->label('Jumlah pembayaran')
-                                                ->prefix('Rp. ')
-                                                ->numeric()
-                                                ->live()
+                                                    return \App\Models\NotaDinas::whereHas('details', function ($query) use ($orderId) {
+                                                        $query->where('order_id', $orderId);
+                                                    })->pluck('no_nd', 'id')->toArray();
+                                                })
                                                 ->reactive()
-                                                ->mask(RawJs::make('$money($input)'))
-                                                ->stripCharacters(',')
-                                                ->columnSpan(1),
+                                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                                    // Only reset if nota_dinas_id is cleared or changed
+                                                    if (!$state) {
+                                                        $set('vendor_id', null);
+                                                        $set('note', null);
+                                                        $set('amount', null);
+                                                        $set('account_holder', null);
+                                                        $set('bank_name', null);
+                                                        $set('bank_account', null);
+                                                        $set('no_nd', null);
+                                                    } else {
+                                                        // Get the selected Nota Dinas and set no_nd field
+                                                        $notaDinas = \App\Models\NotaDinas::find($state);
+                                                        if ($notaDinas) {
+                                                            $set('no_nd', $notaDinas->no_nd);
+                                                        }
+                                                    }
+                                                }),
 
-                                            Forms\Components\Select::make('payment_method_id')
-                                                ->relationship('paymentMethod', 'name')
-                                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->is_cash ? 'Kas/Tunai' : ($record->bank_name ? "{$record->bank_name} - {$record->no_rekening}" : $record->name))
-                                                ->label('Sumber Pembayaran')
+                                            Forms\Components\Hidden::make('no_nd')
+                                                // ->readOnly()
+                                                ->dehydrated()
+                                                ->label('No. Nota Dinas'),
+                                                // ->placeholder('Pilih Nota Dinas terlebih dahulu'),
+
+                                            Forms\Components\Select::make('nota_dinas_detail_id')
+                                                ->label('Detail Nota Dinas')
+                                                ->options(function (callable $get) {
+                                                    $notaDinasId = $get('nota_dinas_id');
+                                                    if (!$notaDinasId) return [];
+
+                                                    try {
+                                                        // More robust path detection
+                                                        $currentExpenseItems = $get('../../expenses') ?? $get('../expenses') ?? $get('expenses') ?? [];
+                                                        $currentDetailId = $get('nota_dinas_detail_id');
+                                                        $currentExpenseId = $get('id');
+                                                        $orderId = $get('../../id') ?? $get('../id') ?? $get('id');
+                                                        
+                                                        // Get all used detail IDs more efficiently
+                                                        $usedDetailIds = [];
+                                                        
+                                                        // From form state
+                                                        foreach ($currentExpenseItems as $item) {
+                                                            if (isset($item['nota_dinas_detail_id']) && 
+                                                                $item['nota_dinas_detail_id'] !== $currentDetailId &&
+                                                                (!isset($item['id']) || $item['id'] !== $currentExpenseId)) {
+                                                                $usedDetailIds[] = $item['nota_dinas_detail_id'];
+                                                            }
+                                                        }
+                                                        
+                                                        // From database
+                                                        if ($orderId) {
+                                                            $dbUsedIds = \App\Models\Expense::where('order_id', $orderId)
+                                                                ->whereNotNull('nota_dinas_detail_id')
+                                                                ->when($currentExpenseId, function($query) use ($currentExpenseId) {
+                                                                    return $query->where('id', '!=', $currentExpenseId);
+                                                                })
+                                                                ->pluck('nota_dinas_detail_id')
+                                                                ->toArray();
+                                                            
+                                                            $usedDetailIds = array_unique(array_merge($usedDetailIds, $dbUsedIds));
+                                                        }
+
+                                        // Single optimized query with all conditions
+                                        $availableDetails = \App\Models\NotaDinasDetail::with('vendor')
+                                            ->where('nota_dinas_id', $notaDinasId)
+                                            ->where('jenis_pengeluaran', 'wedding')
+                                            ->whereNotIn('id', $usedDetailIds)
+                                            ->whereHas('vendor') // More efficient than filter
+                                            ->get();
+
+                                        // Preserve current selection
+                                        if ($currentDetailId && !$availableDetails->contains('id', $currentDetailId)) {
+                                            $currentDetail = \App\Models\NotaDinasDetail::with('vendor')
+                                                ->where('jenis_pengeluaran', 'wedding')
+                                                ->find($currentDetailId);
+                                            if ($currentDetail && $currentDetail->vendor) {
+                                                $availableDetails->prepend($currentDetail);
+                                            }
+                                        }
+
+                                                        return $availableDetails->mapWithKeys(function ($detail) use ($usedDetailIds) {
+                                                            $vendorName = $detail->vendor->name ?? 'N/A';
+                                                            $keperluan = $detail->keperluan ?? 'N/A';
+                                                            $paymentStage = $detail->payment_stage ? " | {$detail->payment_stage}" : '';
+                                                            $jumlah = number_format($detail->jumlah_transfer, 0, ',', '.');
+                                                            
+                                                            $usedIndicator = in_array($detail->id, $usedDetailIds) ? ' (Tersedia kembali)' : '';
+                                                            
+                                                            $label = "{$vendorName} | {$keperluan}{$paymentStage} | Rp {$jumlah}{$usedIndicator}";
+                                                            return [$detail->id => $label];
+                                                        })->toArray();
+                                                        
+                                                    } catch (\Exception $e) {
+                                                        \Illuminate\Support\Facades\Log::error('Error in nota_dinas_detail_id options: ' . $e->getMessage(), [
+                                                            'nota_dinas_id' => $notaDinasId,
+                                                            'trace' => $e->getTraceAsString()
+                                                        ]);
+                                                        return [];
+                                                    }
+                                                })
+                                                ->searchable()
+                                                ->reactive()
+                                                ->live()
+                                                ->helperText(function (callable $get) {
+                                                    try {
+                                                        $notaDinasId = $get('nota_dinas_id');
+                                                        if (!$notaDinasId) return 'Pilih Nota Dinas terlebih dahulu';
+                                                        
+                                                        // More robust path detection
+                                                        $currentExpenseItems = $get('../../expenses') ?? $get('../expenses') ?? $get('expenses') ?? [];
+                                                        $orderId = $get('../../id') ?? $get('../id') ?? $get('id');
+                                                        
+                                                        // Get actual used count (unique IDs)
+                                                        $formUsedIds = array_filter(array_column($currentExpenseItems, 'nota_dinas_detail_id'));
+                                                        $dbUsedIds = $orderId ? \App\Models\Expense::where('order_id', $orderId)
+                                                            ->whereNotNull('nota_dinas_detail_id')
+                                                            ->pluck('nota_dinas_detail_id')
+                                                            ->toArray() : [];
+                                                        
+                                                        $allUsedIds = array_unique(array_merge($formUsedIds, $dbUsedIds));
+                                                        $actualUsedCount = count($allUsedIds);
+                                                        
+                                                        $totalCount = \App\Models\NotaDinasDetail::where('nota_dinas_id', $notaDinasId)
+                                                            ->where('jenis_pengeluaran', 'wedding')
+                                                            ->count();
+                                                        
+                                                        return "Pilih detail nota dinas yang akan dibayar (Sudah dipilih: {$actualUsedCount}/{$totalCount})";
+                                                        
+                                                    } catch (\Exception $e) {
+                                                        \Illuminate\Support\Facades\Log::warning('Error in helperText: ' . $e->getMessage());
+                                                        return 'Pilih detail nota dinas yang akan dibayar';
+                                                    }
+                                                })
+                                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                                    try {
+                                                        if (!$state) {
+                                                            $set('vendor_id', null);
+                                                            $set('account_holder', null);
+                                                            $set('bank_name', null);
+                                                            $set('bank_account', null);
+                                                            $set('amount', null);
+                                                            $set('note', null);
+                                                            return;
+                                                        }
+
+                                                        // Fetch NotaDinasDetail and populate related fields
+                                                        $notaDinasDetail = \App\Models\NotaDinasDetail::with('vendor')->find($state);
+                                                        if ($notaDinasDetail) {
+                                                            $set('vendor_id', $notaDinasDetail->vendor_id);
+                                                            $set('account_holder', $notaDinasDetail->account_holder ?? $notaDinasDetail->vendor->account_holder);
+                                                            $set('bank_name', $notaDinasDetail->bank_name ?? $notaDinasDetail->vendor->bank_name);
+                                                            $set('bank_account', $notaDinasDetail->bank_account ?? $notaDinasDetail->vendor->bank_account);
+                                                            $set('amount', self::safeFloatVal($notaDinasDetail->jumlah_transfer ?? 0));
+                                                            $set('note', $notaDinasDetail->keperluan ?? null);
+                                                        }
+                                                    } catch (\Exception $e) {
+                                                        \Illuminate\Support\Facades\Log::error('Error in afterStateUpdated: ' . $e->getMessage());
+                                                    }
+                                                })
                                                 ->required()
-                                                ->columnSpan(1),
+                                                ->columnSpan(2),
 
-                                            Forms\Components\FileUpload::make('image')
-                                                ->image()
-                                                ->directory('invoice_expenses')
-                                                ->acceptedFileTypes(['image/*', 'application/pdf']) // Allow images and PDFs
-                                                ->label('Invoice')
-                                                ->openable()
-                                                ->downloadable()
-                                                ->maxSize(1280)
-                                                ->columnSpan(1),
-                                        ]),
+                                            Forms\Components\Hidden::make('vendor_id'),
+                                            
+                                            ]),
+                                            
+                                            Forms\Components\Grid::make(3)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('bank_name')
+                                                    ->label('Bank')
+                                                    ->required()
+                                                    ->live()
+                                                    ->columnSpan(1),
+
+                                                Forms\Components\TextInput::make('account_holder')
+                                                    ->label('Nama Rekening')
+                                                    ->required()
+                                                    ->live()
+                                                    ->columnSpan(1),
+                                                
+                                                Forms\Components\TextInput::make('bank_account')
+                                                    ->label('Nomor Rekening')
+                                                    ->required()
+                                                    ->live()
+                                                    ->columnSpan(1),
+                                            ]),
+
+                                        
+                                        Forms\Components\Grid::make(3)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('amount')
+                                                    ->label('Jumlah Transfer')
+                                                    ->numeric()
+                                                    ->prefix('Rp. ')
+                                                    ->mask(RawJs::make('$money($input)'))
+                                                    ->stripCharacters(',')
+                                                    ->dehydrateStateUsing(fn ($state) => floatval(str_replace([',', '.'], ['', '.'], $state ?? 0)))
+                                                    ->required(),
+
+                                                Forms\Components\Select::make('payment_method_id')
+                                                    ->label('Metode Pembayaran')
+                                                    ->required()
+                                                    ->options(\App\Models\PaymentMethod::all()
+                                                    ->pluck('name', 'id')),
+
+                                                Forms\Components\DatePicker::make('date_expense')
+                                                    ->label('Tanggal Pengeluaran')
+                                                    ->default(now())
+                                                    ->required(),
+                                            ]),
+
+                                        Forms\Components\Grid::make(1)
+                                            ->schema([
+                                                Forms\Components\Textarea::make('note')
+                                                    ->label('Catatan / Keperluan')
+                                                    ->required()
+                                                    ->rows(3)
+                                                    ->columnSpan(1),
+                                                Forms\Components\FileUpload::make('image')
+                                                    ->label('Bukti Transfer')
+                                                    ->directory('expense-proofs')
+                                                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                                                    ->maxSize(5120) // 5MB
+                                                    ->required()
+                                                    ->columnSpan(1),
+                                            ]),
                                 ])
+                                ->defaultItems(0)
                                 ->collapsible()
-                                ->itemLabel(fn(array $state): ?string => $state['vendor_id'] ? Vendor::find($state['vendor_id'])?->name ?? 'Unnamed Vendor' : 'New Facility')
+                                ->collapsed(false)
+                                ->itemLabel(function (array $state): ?string {
+                                    if (!isset($state['vendor_id']) || !$state['vendor_id']) {
+                                        return '🆕 Expense Baru';
+                                    }
+                                    
+                                    try {
+                                        $vendor = \App\Models\Vendor::find($state['vendor_id']);
+                                        $vendorName = $vendor?->name ?? 'Vendor #' . $state['vendor_id'];
+                                        
+                                        // Safe currency formatting helper
+                                        $formatCurrency = function($value) {
+                                            if (empty($value)) return 'Rp 0';
+                                            
+                                            // Handle different data types
+                                            if (is_string($value)) {
+                                                // Remove existing formatting
+                                                $value = preg_replace('/[^\d.,]/', '', $value);
+                                                $value = str_replace(',', '', $value);
+                                            }
+                                            
+                                            $numericValue = self::safeFloatVal($value);
+                                            return 'Rp ' . number_format($numericValue, 0, ',', '.');
+                                        };
+                                        
+                                        $formattedAmount = $formatCurrency($state['amount'] ?? 0);
+                                        
+                                        // Get payment stage label from NotaDinasDetail
+                                        $paymentStage = 'DP'; // default
+                                        if (isset($state['nota_dinas_detail_id'])) {
+                                            try {
+                                                $notaDinasDetail = \App\Models\NotaDinasDetail::find($state['nota_dinas_detail_id']);
+                                                $paymentStage = $notaDinasDetail?->payment_stage ?? 'DP';
+                                            } catch (\Exception $e) {
+                                                // Keep default
+                                            }
+                                        }
+                                        
+                                        return "🏪 {$vendorName} ({$paymentStage}) - {$formattedAmount}";
+                                    } catch (\Exception $e) {
+                                        \Illuminate\Support\Facades\Log::warning('Error in expense itemLabel: ' . $e->getMessage());
+                                        return '⚠️ Expense Item';
+                                    }
+                                })
+                                ->addActionLabel('Tambah Expense')
                                 ->reorderable()
                                 ->cloneable()
-                                ->reactive()
-                                ->live()
-                                ->extraItemActions([ // Mengganti aksi untuk mengarah ke VendorResource
-                                    Action::make('openVendor')
-                                        ->label('Open Vendor')
-                                        ->icon('heroicon-m-building-storefront')
-                                        ->color('secondary')
-                                        ->url(function (array $arguments, Repeater $component): ?string {
-                                            $itemData = $component->getRawItemState($arguments['item']);
-                                            $vendorId = $itemData['vendor_id'] ?? null;
-                                            if (!$vendorId) {
-                                                return null;
-                                            }
-                                            $vendor = Vendor::find($vendorId);
-                                            return $vendor ? VendorResource::getUrl('edit', ['record' => $vendor]) : null;
-                                        }, shouldOpenInNewTab: true)
-                                        ->hidden(function (array $arguments, Repeater $component): bool {
-                                            $itemData = $component->getRawItemState($arguments['item']);
-                                            return empty($itemData['vendor_id']);
-                                        })
-                                        ->tooltip('Buka data vendor ini di tab baru'),
-                                ]),
+                                ->afterStateUpdated(function ($state, $livewire) {
+                                    // Force refresh form to update options in all items
+                                    $livewire->dispatch('refreshForm');
+                                }),
                         ]),
                     ]),
+
+                // Wizard\Step::make('Pengeluaran')
+                //     ->icon('heroicon-o-book-open')
+                //     ->description('Catat detail pengeluaran')
+                //     ->schema([
+                //         Forms\Components\Section::make('Pengeluaran')->schema([
+                //             Forms\Components\Repeater::make('expenses')
+                //                 ->relationship('expenses')
+                //                 ->schema([
+                //                     Forms\Components\Grid::make(3)
+                //                         ->schema([
+                //                             Forms\Components\Select::make('vendor_id')
+                //                                 ->relationship(
+                //                                     name: 'vendor',
+                //                                     titleAttribute: 'name',
+                //                                     // Filter untuk hanya menampilkan vendor dengan status 'vendor'
+                //                                     // modifyQueryUsing: fn (Builder $query) => $query->where('status', 'vendor')
+                //                                 )
+                //                                 ->required()
+                //                                 ->searchable()
+                //                                 ->preload()
+                //                                 ->columnSpan(1),
+
+                //                             Forms\Components\TextInput::make('no_nd')
+                //                                 ->required()->prefix('ND-0')
+                //                                 ->label('Nomor Nota Dinas')
+                //                                 ->numeric()
+                //                                 ->columnSpan(1),
+
+                //                             Forms\Components\Select::make('kategori_transaksi')
+                //                                 ->options([
+                //                                     'uang_masuk' => 'Uang Masuk',
+                //                                     'uang_keluar' => 'Uang Keluar',
+                //                                 ])
+                //                                 ->default('uang_keluar')
+                //                                 ->label('Tipe Transaksi')
+                //                                 ->required(),
+                //                             Forms\Components\TextInput::make('note')
+                //                                 ->required()
+                //                                 ->label('Keterangan pembayaran')
+                //                                 ->maxLength(255),
+
+                //                             Forms\Components\DatePicker::make('date_expense')
+                //                                 ->required()
+                //                                 ->label('Tanggal pembayaran')
+                //                                 ->columnSpan(1),
+
+                //                             Forms\Components\TextInput::make('amount')
+                //                                 ->required()
+                //                                 ->label('Jumlah pembayaran')
+                //                                 ->prefix('Rp. ')
+                //                                 ->numeric()
+                //                                 ->live()
+                //                                 ->reactive()
+                //                                 ->mask(RawJs::make('$money($input)'))
+                //                                 ->stripCharacters(',')
+                //                                 ->columnSpan(1),
+
+                //                             Forms\Components\Select::make('payment_method_id')
+                //                                 ->relationship('paymentMethod', 'name')
+                //                                 ->getOptionLabelFromRecordUsing(fn ($record) => $record->is_cash ? 'Kas/Tunai' : ($record->bank_name ? "{$record->bank_name} - {$record->no_rekening}" : $record->name))
+                //                                 ->label('Sumber Pembayaran')
+                //                                 ->required()
+                //                                 ->columnSpan(1),
+
+                //                             Forms\Components\FileUpload::make('image')
+                //                                 ->image()
+                //                                 ->directory('invoice_expenses')
+                //                                 ->acceptedFileTypes(['image/*', 'application/pdf']) // Allow images and PDFs
+                //                                 ->label('Invoice')
+                //                                 ->openable()
+                //                                 ->downloadable()
+                //                                 ->maxSize(1280)
+                //                                 ->columnSpan(1),
+                //                         ]),
+                //                 ])
+                //                 ->collapsible()
+                //                 ->itemLabel(fn(array $state): ?string => $state['vendor_id'] ? Vendor::find($state['vendor_id'])?->name ?? 'Unnamed Vendor' : 'New Facility')
+                //                 ->reorderable()
+                //                 ->cloneable()
+                //                 ->reactive()
+                //                 ->live()
+                //                 ->extraItemActions([ // Mengganti aksi untuk mengarah ke VendorResource
+                //                     Action::make('openVendor')
+                //                         ->label('Open Vendor')
+                //                         ->icon('heroicon-m-building-storefront')
+                //                         ->color('secondary')
+                //                         ->url(function (array $arguments, Repeater $component): ?string {
+                //                             $itemData = $component->getRawItemState($arguments['item']);
+                //                             $vendorId = $itemData['vendor_id'] ?? null;
+                //                             if (!$vendorId) {
+                //                                 return null;
+                //                             }
+                //                             $vendor = Vendor::find($vendorId);
+                //                             return $vendor ? VendorResource::getUrl('edit', ['record' => $vendor]) : null;
+                //                         }, shouldOpenInNewTab: true)
+                //                         ->hidden(function (array $arguments, Repeater $component): bool {
+                //                             $itemData = $component->getRawItemState($arguments['item']);
+                //                             return empty($itemData['vendor_id']);
+                //                         })
+                //                         ->tooltip('Buka data vendor ini di tab baru'),
+                //                 ]),
+                //         ]),
+                //     ]),
 
                 Wizard\Step::make('Riwayat Modifikasi')
                     ->icon('heroicon-o-clock')
@@ -960,16 +1309,6 @@ class OrderResource extends Resource
                                 ->send();
                         }),
 
-                    // Action yang sudah disatukan dan disempurnakan
-                    Tables\Actions\Action::make('laporanProfitLoss')
-                        ->label('Laporan L/R')
-                        ->icon('heroicon-o-document-chart-bar')
-                        ->color('warning')
-                        ->url(fn (Order $record): string => route('orders.profit_loss.preview', $record))
-                        ->openUrlInNewTab()
-                        ->tooltip('Buka preview Laporan Laba Rugi di tab baru. Anda bisa men-download PDF dari halaman tersebut.')
-                        ->visible(fn (Order $record): bool => $record->status !== 'cancelled' && !$record->trashed()),
-
                     Tables\Actions\Action::make('Invoice Actions')
                         ->label('Aksi Invoice')
                         ->icon('heroicon-o-document-text')
@@ -1261,8 +1600,8 @@ class OrderResource extends Resource
                 $set('total_price', $calculatedTotalPrice); // Mengatur field 'total_price' di form Order
 
                 // Hitung ulang grand_total berdasarkan nilai baru
-                $penambahan = $get('penambahan') ?? 0;
-                $promo = $get('promo') ?? 0;
+                $penambahan = self::safeFloatVal($get('penambahan'));
+                $promo = self::safeFloatVal($get('promo'));
                 $grandTotal = $calculatedTotalPrice + $penambahan - $promo - $calculatedProductPengurangan;
                 $set('grand_total', $grandTotal); // Mengatur field 'grand_total' di form Order
             });
@@ -1282,11 +1621,15 @@ class OrderResource extends Resource
 
         foreach ($selectedProducts as $item) {
             $productId = $item['product_id'];
-            $quantity = $item['quantity'];
+            $quantity = self::safeFloatVal($item['quantity'] ?? 0);
+            
             // Check if product exists in our fetched collection and has a price
             if (isset($productsFromDb[$productId]) && isset($productsFromDb[$productId]->price)) {
-                $calculatedTotalPrice += $productsFromDb[$productId]->product_price * $quantity;
-                $calculatedProductPengurangan += ($productsFromDb[$productId]->pengurangan ?? 0) * $quantity;
+                $productPrice = self::safeFloatVal($productsFromDb[$productId]->product_price ?? 0);
+                $productPengurangan = self::safeFloatVal($productsFromDb[$productId]->pengurangan ?? 0);
+                
+                $calculatedTotalPrice += $productPrice * $quantity;
+                $calculatedProductPengurangan += $productPengurangan * $quantity;
             }
         }
 
@@ -1294,8 +1637,8 @@ class OrderResource extends Resource
         $set('pengurangan', $calculatedProductPengurangan); // Set field 'pengurangan'
 
         // Recalculate grand_total
-        $penambahan = $get('penambahan') ?? 0;
-        $promo = $get('promo') ?? 0;
+        $penambahan = self::safeFloatVal($get('penambahan'));
+        $promo = self::safeFloatVal($get('promo'));
         // Gunakan $calculatedProductPengurangan yang baru dihitung
         $grandTotal = $calculatedTotalPrice + $penambahan - $promo - $calculatedProductPengurangan;
         $set('grand_total', $grandTotal);
@@ -1317,18 +1660,21 @@ class OrderResource extends Resource
 
     protected static function updateDependentFinancialFields(Forms\Get $get, Forms\Set $set): void
     {
-        // Ambil grand_total yang sudah dihitung dan di-set oleh pemanggil (updateTotalPrice atau afterStateUpdated promo/penambahan)
-        $grandTotal = floatval(str_replace(',', '', $get('grand_total') ?? '0'));
+        // Pertama, pastikan grand_total dihitung ulang dengan safe conversion
+        $total_price = self::safeFloatVal($get('total_price'));
+        $pengurangan_val = self::safeFloatVal($get('pengurangan'));
+        $promo_val = self::safeFloatVal($get('promo'));
+        $penambahan_val = self::safeFloatVal($get('penambahan'));
+        $grandTotal = $total_price + $penambahan_val - $promo_val - $pengurangan_val;
+        $set('grand_total', $grandTotal);
 
-        // Hitung 'bayar' dari repeater 'dataPembayaran'
-        // Perlu diperhatikan scope $get di sini. Jika dipanggil dari updateTotalPrice, $get mungkin perlu path relatif.
-        // Namun, jika field 'Jika Ada Pembayaran' ada di root form atau step yang sama, ini akan bekerja.
-        // Untuk amannya, kita asumsikan field 'Jika Ada Pembayaran' bisa diakses dari $get saat ini.
+        // Hitung 'bayar' dari repeater 'dataPembayaran' dengan safe conversion
         $paymentItems = $get('Jika Ada Pembayaran') ?? [];
         $bayar = 0;
         if (is_array($paymentItems)) {
             foreach ($paymentItems as $paymentItem) {
-                $bayar += floatval(str_replace(',', '', $paymentItem['nominal'] ?? '0'));
+                $nominalValue = $paymentItem['nominal'] ?? 0;
+                $bayar += self::safeFloatVal($nominalValue);
             }
         }
         $set('bayar', $bayar);

@@ -21,12 +21,31 @@ class Expense extends Model
         'no_nd',
         'image',
         'kategori_transaksi',
+
+        // Tambahkan atribut lain yang diperlukan
+        'nota_dinas_id',
+        'nota_dinas_detail_id',
+        'payment_stage',
+        'account_holder',
+        'bank_name',
+        'bank_account',
     ];
 
     protected $casts = [
         'date_expense' => 'date', // Atau 'datetime' jika Anda menyimpan waktu juga
         'amount' => 'float', // Pastikan amount juga di-cast jika perlu
     ];
+
+    public function setAmountAttribute($value)
+    {
+        if (is_string($value)) {
+            // Remove any formatting and convert to float
+            $value = preg_replace('/[^\d.,]/', '', $value);
+            $value = str_replace(',', '', $value);
+        }
+        
+        $this->attributes['amount'] = floatval($value);
+    }
 
     public function category(): BelongsTo
     {
@@ -58,5 +77,81 @@ class Expense extends Model
     public function expenses()
     {
         return $this->hasMany(Expense::class, 'payment_method_id');
+    }
+
+    /**
+     * Boot the model to add validation rules
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Add validation before saving
+        static::saving(function ($expense) {
+            if ($expense->nota_dinas_detail_id && $expense->order_id) {
+                // First, cleanup any soft deleted records that might cause constraint conflicts
+                static::onlyTrashed()
+                    ->where('order_id', $expense->order_id)
+                    ->where('nota_dinas_detail_id', $expense->nota_dinas_detail_id)
+                    ->forceDelete();
+                
+                // Check if nota_dinas_detail_id already exists for this order (excluding current record)
+                $existingExpense = static::where('order_id', $expense->order_id)
+                    ->where('nota_dinas_detail_id', $expense->nota_dinas_detail_id)
+                    ->when($expense->exists, function ($query) use ($expense) {
+                        return $query->where('id', '!=', $expense->id);
+                    })
+                    ->first();
+
+                if ($existingExpense) {
+                    $notaDinasDetail = \App\Models\NotaDinasDetail::with('vendor')->find($expense->nota_dinas_detail_id);
+                    $vendorName = $notaDinasDetail?->vendor?->name ?? 'Vendor ini';
+                    $paymentStage = $notaDinasDetail?->payment_stage ?? 'tahap ini';
+                    throw new \Exception("Detail Nota Dinas untuk vendor {$vendorName} (tahap: {$paymentStage}) sudah memiliki expense pada order ini. Silakan pilih detail nota dinas yang berbeda.");
+                }
+            }
+        });
+        
+        // Clean up soft deleted records periodically when new records are created
+        static::created(function ($expense) {
+            // Clean up old soft deleted records for the same order to prevent constraint conflicts
+            if ($expense->order_id) {
+                $cleanupCount = static::onlyTrashed()
+                    ->where('order_id', $expense->order_id)
+                    ->where('created_at', '<', now()->subDays(7)) // Clean records older than 7 days
+                    ->forceDelete();
+                
+                if ($cleanupCount > 0) {
+                    \Illuminate\Support\Facades\Log::info("Cleaned up {$cleanupCount} old soft deleted expense records for order {$expense->order_id}");
+                }
+            }
+        });
+    }
+
+    /**
+     * Get payment stage label
+     */
+    public static function getPaymentStageLabel($stage)
+    {
+        $labels = [
+            'down_payment' => 'Down Payment (DP)',
+            'payment_1' => 'Pembayaran 1',
+            'payment_2' => 'Pembayaran 2',
+            'payment_3' => 'Pembayaran 3',
+            'final_payment' => 'Pelunasan',
+            'additional' => 'Tambahan/Lainnya',
+        ];
+        
+        return $labels[$stage] ?? $stage;
+    }
+
+    public function notaDinas()
+    {
+        return $this->belongsTo(NotaDinas::class);
+    }
+
+    public function notaDinasDetail()
+    {
+        return $this->belongsTo(NotaDinasDetail::class);
     }
 }

@@ -209,8 +209,18 @@
             border-collapse: collapse;
             margin-bottom: 12px;
             font-size: 9px;
-            table-layout: auto;
+            table-layout: fixed;
         }
+
+        /* Lebar kolom yang disesuaikan untuk 8 kolom */
+        th:nth-child(1), td:nth-child(1) { width: 12%; } /* Tanggal */
+        th:nth-child(2), td:nth-child(2) { width: 12%; } /* Jenis */
+        th:nth-child(3), td:nth-child(3) { width: 18%; } /* Deskripsi */
+        th:nth-child(4), td:nth-child(4) { width: 12%; } /* Vendor */
+        th:nth-child(5), td:nth-child(5) { width: 15%; } /* Prospect/Event */
+        th:nth-child(6), td:nth-child(6) { width: 13%; } /* Rekening */
+        th:nth-child(7), td:nth-child(7) { width: 9%; }  /* Jumlah */
+        th:nth-child(8), td:nth-child(8) { width: 9%; }  /* Saldo */
 
         th,
         td {
@@ -400,6 +410,7 @@
                 <th>Tanggal</th>
                 <th>Jenis</th>
                 <th>Deskripsi</th>
+                <th>Vendor</th>
                 <th>Prospect/Event</th>
                 <th>Rekening</th>
                 <th class="text-right">Jumlah</th>
@@ -412,6 +423,7 @@
                     <td>{{ \Carbon\Carbon::parse($item->tanggal)->format('d/m/Y') }}</td>
                     <td>{{ $item->jenis }}</td>
                     <td>{{ $item->deskripsi }}</td>
+                    <td>{{ $item->vendor_name ?? '-' }}</td>
                     <td>{{ $item->prospect_name ?? '-' }}</td>
                     <td>{{ $item->payment_method_details ?? '-' }}</td>
                     <td class="text-right">{{ number_format($item->jumlah, 0, ',', '.') }}</td>

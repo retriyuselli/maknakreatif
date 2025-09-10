@@ -21,7 +21,13 @@ class StatusSeeder extends Seeder
         ];
 
         foreach ($statuses as $status) {
-            Status::create($status);
+            // Menggunakan firstOrCreate untuk mencegah duplikasi data jika seeder dijalankan lagi
+            Status::firstOrCreate(
+                ['status_name' => $status['status_name']],
+                $status
+            );
         }
+        $this->command->info('✅ Status seeder completed!');
+        $this->command->newLine();
     }
 }

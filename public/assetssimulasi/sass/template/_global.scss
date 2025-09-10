@@ -135,6 +135,7 @@ hr.style1 {
 .invoice-note {
     border-top: 1px solid $border-color;
     border-bottom: 1px solid $border-color;
+    font-size: 9px;
     padding-top: 15px;
     padding-bottom: 15px;
     text-align: center;
@@ -213,14 +214,14 @@ hr.style1 {
         width: 60px;
         line-height: 37px;
         text-align: center;
-        background-color: #CFFFEA;
+        background-color: #cfffea;
         border-radius: 7px 0 0 7px;
         transition: 0.3s ease-in-out;
         svg path {
             transition: 0.3s ease-in-out;
         }
         &:hover {
-            background-color: #00C764;
+            background-color: #00c764;
             svg {
                 path {
                     fill: #fff;
@@ -229,14 +230,13 @@ hr.style1 {
         }
     }
     .download_btn {
-        background-color: #E1ECFF;
+        background-color: #e1ecff;
         border-radius: 0 7px 7px 0;
         &:hover {
             background-color: $theme-color;
         }
     }
 }
-
 
 /* For remove URL and Page Number -------*/
 // @page {

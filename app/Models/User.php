@@ -8,6 +8,8 @@ use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -29,9 +31,21 @@ class User extends Authenticatable implements HasAvatar
         'email',
         'password',
         'status_id',
+        'status',
         'avatar_url',
         'expire_date',
         'role',
+        'status_user',
+
+        // Personal information fields
+        'phone_number',
+        'address',
+        'date_of_birth',
+        'gender',
+        'hire_date',
+        'last_working_date',
+        'department',
+        'annual_leave_quota'
     ];
 
     /**
@@ -42,6 +56,15 @@ class User extends Authenticatable implements HasAvatar
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'avatar'
     ];
 
     /**
@@ -56,29 +79,74 @@ class User extends Authenticatable implements HasAvatar
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'expire_date' => 'datetime',
+            'date_of_birth' => 'date',
+            'hire_date' => 'date',
+            'last_working_date' => 'date',
         ];
     }
 
     public function getFilamentAvatarUrl(): ?string
     {
-        return $this->avatar_url ? Storage::url("$this->avatar_url") : null;
+        if ($this->avatar_url) {
+            return Storage::url($this->avatar_url);
+        }
+        
+        return null;
     }
 
-    public function orders()
+    /**
+     * Get the avatar URL for frontend display
+     */
+    public function getAvatarAttribute(): ?string
+    {
+        if ($this->avatar_url) {
+            return Storage::url($this->avatar_url);
+        }
+        
+        return null;
+    }
+
+    public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
     }
     
-    public function employees()
+    public function employees(): HasMany
     {
         return $this->hasMany(Employee::class);
     }
 
-        public function firstEmployee(): HasOne
+    public function firstEmployee(): HasOne
     {
         return $this->hasOne(Employee::class)->oldestOfMany();
     }
 
+    public function latestEmployee(): HasOne
+    {
+        return $this->hasOne(Employee::class)->latestOfMany();
+    }
+
+    public function activeEmployee(): HasOne
+    {
+        return $this->hasOne(Employee::class)->whereNull('date_of_out');
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
+    }
+
+    public function vendors(): HasMany
+    {
+        return $this->hasMany(Vendor::class, 'created_by');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(\Illuminate\Notifications\DatabaseNotification::class, 'notifiable_id');
+    }
+
+    // Computed attributes for HR data
     public function getClosingAttribute()
     {
         return $this->orders->sum('total_price');
@@ -89,15 +157,55 @@ class User extends Authenticatable implements HasAvatar
         $totAM = Order::where('user_id', $this->id)->count();
         return $totAM;
     }
-    
-    public function order()
+
+    public function getTotalRevenueAttribute()
     {
-        return $this->belongsTo(Order::class);
+        return $this->orders()->where('is_paid', true)->sum('total_price');
     }
 
-    public function status()
+    public function getPendingOrdersCountAttribute()
     {
-        return $this->belongsTo(Status::class);
+        return $this->orders()->where('status', \App\Enums\OrderStatus::Pending)->count();
+    }
+
+    public function getCompletedOrdersCountAttribute()
+    {
+        return $this->orders()->where('status', \App\Enums\OrderStatus::Done)->count();
+    }
+
+    public function getProcessingOrdersCountAttribute()
+    {
+        return $this->orders()->where('status', \App\Enums\OrderStatus::Processing)->count();
+    }
+
+    public function getCancelledOrdersCountAttribute()
+    {
+        return $this->orders()->where('status', \App\Enums\OrderStatus::Cancelled)->count();
+    }
+
+    public function getAverageOrderValueAttribute()
+    {
+        $ordersCount = $this->orders()->count();
+        if ($ordersCount === 0) return 0;
+        
+        return $this->orders()->sum('total_price') / $ordersCount;
+    }
+
+    public function getMonthlyRevenueAttribute()
+    {
+        return $this->orders()
+            ->where('is_paid', true)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('total_price');
+    }
+
+    public function getYearlyRevenueAttribute()
+    {
+        return $this->orders()
+            ->where('is_paid', true)
+            ->whereYear('created_at', now()->year)
+            ->sum('total_price');
     }
 
     public function canAccessPanel(Panel $panel): bool
@@ -142,5 +250,30 @@ class User extends Authenticatable implements HasAvatar
         }
         
         return (int) Carbon::now()->diffInDays($this->expire_date, false);
+    }
+
+    // new fields
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class);
+    }
+
+    public function leaveRequests()
+    {
+        return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function leaveBalances()
+    {
+        return $this->hasMany(LeaveBalance::class);
+    }
+
+    /**
+     * Get the employee ID attribute
+     * Format: EMP-0001, EMP-0002, etc.
+     */
+    public function getEmployeeIdAttribute()
+    {
+        return 'EMP-' . str_pad($this->id, 4, '0', STR_PAD_LEFT);
     }
 }

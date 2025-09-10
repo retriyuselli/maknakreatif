@@ -2,12 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Expense;
-use App\Models\Prospect;
-use App\Models\Role;
-use App\Models\Status;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Database\Seeders\IndustrySeeder;
@@ -18,53 +12,64 @@ use Database\Seeders\EmployeeSeeder;
 use Database\Seeders\DataPribadiSeeder;
 use Database\Seeders\PaymentMethodSeeder;
 use Database\Seeders\BankStatementSeeder;
-use Database\Seeders\ProspectSeeder;
 use Database\Seeders\SimulasiProdukSeeder;
-use Database\Seeders\OrderSeeder;
-use Database\Seeders\NotaDinasSeeder;
 
 class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     * Urutan pemanggilan seeder ini SANGAT PENTING untuk menjaga integritas foreign key.
      */
     public function run(): void
     {
-        // Call specific seeders in order
+        $this->command->info('🚀 Starting database seeder...');
+        $this->command->newLine();
+
         $this->call([
-            // First create users and statuses
-            // (User and Status creation is done below)
+            // 1. Master Data (tidak ada dependency atau dependency minimal)
+            StatusSeeder::class,           // Status untuk user, dll.
+            IndustrySeeder::class,         // Industri untuk prospek, dll.
+            CategorySeeder::class,         // Kategori untuk produk dan vendor.
+            PaymentMethodSeeder::class,    // Metode pembayaran untuk transaksi.
+            RoleSeeder::class,             // Peran dan izin pengguna (Spatie).
+            SopCategorySeeder::class,      // Kategori untuk SOP.
+
+            // 2. Data Pengguna (tergantung pada Status dan Role)
+            UserSeeder::class,             // Pengguna sistem (admin, staff, dll).
+
+            // 3. Data Master Bisnis (tergantung pada User, Category)
+            VendorSeeder::class,           // Vendor/supplier.
+            ProductSeeder::class,          // Produk/layanan yang ditawarkan.
+
+            // 4. Data HR (tergantung pada User)
+            EmployeeSeeder::class,         // Data karyawan.
+            DataPribadiSeeder::class,      // Data pribadi karyawan.
+            LeaveTypeSeeder::class,        // Jenis-jenis cuti karyawan.
+            PayrollSeeder::class,          // Data gaji karyawan.
+            LeaveRequestSeeder::class,     // Data permohonan cuti.
+
+            // 5. Data Bisnis (tergantung pada User, Industry, Product)
+            ProspectSeeder::class,         // Calon klien.
+            ProspectAppSeeder::class,      // Aplikasi dari calon klien.
+            SimulasiProdukSeeder::class,   // Simulasi penawaran produk.
+
+            // 6. Data Operasional (tergantung pada Prospect, User, Product, Vendor)
+            OrderSeeder::class,            // Order/proyek wedding.
+            NotaDinasSeeder::class,        // Nota dinas untuk pengeluaran.
+
+            // 7. Data Finansial (tergantung pada PaymentMethod, Order, NotaDinas)
+            BankStatementSeeder::class,    // Laporan bank (opsional).
+            ExpenseOpsSeeder::class,       // Pengeluaran operasional.
+            PendapatanLainSeeder::class,   // Pendapatan di luar order.
+            PengeluaranLainSeeder::class,  // Pengeluaran di luar order.
+
+            // 8. Data Tambahan
+            SopSeeder::class,              // SOP (tergantung pada User, SopCategory).
+            SopPermissionSeeder::class,    // Izin khusus untuk SOP.
+            CompanyLogoSeeder::class,      // Logo perusahaan klien/partner.
         ]);
 
-        Status::factory()->createMany([
-            ['status_name' => 'Karyawan'],
-            ['status_name' => 'Account Manager'],
-            ['status_name' => 'Event Manager'],
-            ['status_name' => 'Finance'],
-            ['status_name' => 'Freelance'],
-            ['status_name' => 'Vendor'],
-            ['status_name' => 'Medsos'],
-            ['status_name' => 'Admin Account Manager & Event Manager'],
-        ]);
-
-        // Call all seeders after users and statuses are created
-        $this->call([
-            IndustrySeeder::class,       // Master data - Industries first
-            CategorySeeder::class,       // Master data - Categories
-            VendorSeeder::class,         // Master data - Vendors
-            ProductSeeder::class,        // Master data - Products
-            EmployeeSeeder::class,       // HR data - Employees
-            DataPribadiSeeder::class,    // HR data - Personal data
-            PaymentMethodSeeder::class,  // Finance data - Payment methods
-            BankStatementSeeder::class,  // Finance data - Bank statements
-            ProspectSeeder::class,       // Business data - Prospects
-            SimulasiProdukSeeder::class, // Business data - Product simulations
-            OrderSeeder::class,          // Business data - Wedding orders
-            ProspectAppSeeder::class,    // Business data - Prospect applications
-            ExpenseOpsSeeder::class, // Business data - Operational expenses
-            PendapatanLainSeeder::class, // Business data - Other incomes
-            PengeluaranLainSeeder::class, // Business data - Other expenses
-            NotaDinasSeeder::class,      // Finance data - Nota Dinas with details
-        ]);
+        $this->command->newLine();
+        $this->command->info('✅ Database seeding completed successfully!');
     }
 }

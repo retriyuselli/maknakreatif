@@ -3,11 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\NotaDinas;
-use App\Models\NotaDinasDetail;
 use App\Models\User;
-use App\Models\Vendor;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class NotaDinasSeeder extends Seeder
 {
@@ -16,174 +14,104 @@ class NotaDinasSeeder extends Seeder
      */
     public function run(): void
     {
-        // Get users for pengirim, penerima, and approver
+        // Get required data
         $users = User::all();
-        $vendors = Vendor::all();
 
-        if ($users->isEmpty()) {
-            $this->command->error('No users found. Please run UserSeeder first.');
-            return;
-        }
-
-        if ($vendors->isEmpty()) {
-            $this->command->error('No vendors found. Please run VendorSeeder first.');
+        if ($users->count() < 2) {
+            $this->command->error('Need at least 2 users. Please run UserSeeder first.');
             return;
         }
 
         $this->command->info('Creating Nota Dinas records...');
 
-        // Create sample Nota Dinas with details
+        // Sample Nota Dinas data - Basic headers only
         $notaDinasList = [
             [
-                'no_nd' => 'ND-202508-001',
+                'no_nd' => 'ND/001/VIII/2025',
                 'tanggal' => '2025-08-01',
                 'sifat' => 'Segera',
-                'hal' => 'Permintaan Transfer Vendor Wedding Andi & Sari',
-                'catatan' => 'Transfer untuk vendor wedding Andi & Sari tanggal 15 Agustus 2025. Mohon segera diproses.',
+                'hal' => 'Permintaan Transfer Vendor Wedding',
+                'catatan' => 'Transfer untuk vendor wedding. Mohon segera diproses.',
                 'status' => 'disetujui',
-                'details' => [
-                    [
-                        'nama_rekening' => 'CV Dekorasi Mewah Jakarta',
-                        'keperluan' => 'Dekorasi Pelaminan dan Taman',
-                        'event' => 'Wedding Andi & Sari',
-                        'jumlah_transfer' => 15000000,
-                        'invoice_number' => 'INV-DM-001',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                    [
-                        'nama_rekening' => 'UD Catering Premium Bogor',
-                        'keperluan' => 'Catering 200 Pax',
-                        'event' => 'Wedding Andi & Sari',
-                        'jumlah_transfer' => 25000000,
-                        'invoice_number' => 'INV-CP-001',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                    [
-                        'nama_rekening' => 'Foto Video Cinematic',
-                        'keperluan' => 'Dokumentasi Wedding',
-                        'event' => 'Wedding Andi & Sari',
-                        'jumlah_transfer' => 8000000,
-                        'invoice_number' => 'INV-FV-001',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                ],
             ],
             [
-                'no_nd' => 'ND-202508-002',
+                'no_nd' => 'ND/002/VIII/2025',
                 'tanggal' => '2025-08-05',
                 'sifat' => 'Biasa',
-                'hal' => 'Permintaan Transfer Vendor Wedding Budi & Rina',
-                'catatan' => 'Transfer untuk vendor wedding Budi & Rina tanggal 20 Agustus 2025.',
+                'hal' => 'Permintaan Transfer Vendor Catering',
+                'catatan' => 'Transfer untuk vendor catering acara wedding.',
                 'status' => 'diajukan',
-                'details' => [
-                    [
-                        'nama_rekening' => 'Soundsystem Pro Jakarta',
-                        'keperluan' => 'Sound System dan Lighting',
-                        'event' => 'Wedding Budi & Rina',
-                        'jumlah_transfer' => 5000000,
-                        'invoice_number' => 'INV-SS-002',
-                        'status_invoice' => 'menunggu',
-                    ],
-                    [
-                        'nama_rekening' => 'Tenda Pesta Sentosa',
-                        'keperluan' => 'Sewa Tenda 10x15',
-                        'event' => 'Wedding Budi & Rina',
-                        'jumlah_transfer' => 3500000,
-                        'invoice_number' => 'INV-TP-002',
-                        'status_invoice' => 'belum_dibayar',
-                    ],
-                ],
             ],
             [
-                'no_nd' => 'ND-202508-003',
+                'no_nd' => 'ND/003/VIII/2025',
                 'tanggal' => '2025-08-10',
                 'sifat' => 'Segera',
-                'hal' => 'Permintaan Transfer Vendor Wedding David & Lisa',
-                'catatan' => 'Transfer untuk vendor wedding David & Lisa tanggal 25 Agustus 2025. Event premium package.',
-                'status' => 'dibayar',
-                'details' => [
-                    [
-                        'nama_rekening' => 'Luxury Wedding Decor',
-                        'keperluan' => 'Dekorasi Premium Package',
-                        'event' => 'Wedding David & Lisa',
-                        'jumlah_transfer' => 35000000,
-                        'invoice_number' => 'INV-LW-003',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                    [
-                        'nama_rekening' => 'Catering Royal Menu',
-                        'keperluan' => 'Catering 300 Pax Premium',
-                        'event' => 'Wedding David & Lisa',
-                        'jumlah_transfer' => 45000000,
-                        'invoice_number' => 'INV-CR-003',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                    [
-                        'nama_rekening' => 'Professional Wedding Band',
-                        'keperluan' => 'Live Music Performance',
-                        'event' => 'Wedding David & Lisa',
-                        'jumlah_transfer' => 12000000,
-                        'invoice_number' => 'INV-PW-003',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                    [
-                        'nama_rekening' => 'Makeup Artist Celebrity',
-                        'keperluan' => 'Makeup Pengantin dan Keluarga',
-                        'event' => 'Wedding David & Lisa',
-                        'jumlah_transfer' => 8000000,
-                        'invoice_number' => 'INV-MA-003',
-                        'status_invoice' => 'sudah_dibayar',
-                    ],
-                ],
-            ],
-            [
-                'no_nd' => 'ND-202508-004',
-                'tanggal' => '2025-08-12',
-                'sifat' => 'Biasa',
-                'hal' => 'Permintaan Transfer Vendor Corporate Event PT Maju Jaya',
-                'catatan' => 'Transfer untuk vendor corporate event PT Maju Jaya tanggal 30 Agustus 2025.',
+                'hal' => 'Permintaan Transfer Multiple Vendor',
+                'catatan' => 'Transfer untuk beberapa vendor acara wedding.',
                 'status' => 'draft',
-                'details' => [
-                    [
-                        'nama_rekening' => 'Event Organizer Professional',
-                        'keperluan' => 'Corporate Event Management',
-                        'event' => 'Annual Meeting PT Maju Jaya',
-                        'jumlah_transfer' => 20000000,
-                        'invoice_number' => 'INV-EO-004',
-                        'status_invoice' => 'belum_dibayar',
-                    ],
-                    [
-                        'nama_rekening' => 'Hotel Grand Ballroom',
-                        'keperluan' => 'Venue Corporate Event',
-                        'event' => 'Annual Meeting PT Maju Jaya',
-                        'jumlah_transfer' => 15000000,
-                        'invoice_number' => 'INV-HG-004',
-                        'status_invoice' => 'belum_dibayar',
-                    ],
-                ],
             ],
             [
-                'no_nd' => 'ND-202508-005',
+                'no_nd' => 'ND/004/VIII/2025',
+                'tanggal' => '2025-08-12',
+                'sifat' => 'Urgent',
+                'hal' => 'Transfer Pelunasan Vendor Musik',
+                'catatan' => 'Pelunasan untuk vendor musik dan sound system.',
+                'status' => 'disetujui',
+            ],
+            [
+                'no_nd' => 'ND/005/VIII/2025',
                 'tanggal' => '2025-08-15',
+                'sifat' => 'Biasa',
+                'hal' => 'Transfer Vendor Makeup & Busana',
+                'catatan' => 'Transfer untuk vendor makeup artist dan sewa busana pengantin.',
+                'status' => 'diajukan',
+            ],
+            [
+                'no_nd' => 'ND/006/VIII/2025',
+                'tanggal' => '2025-08-18',
                 'sifat' => 'Segera',
-                'hal' => 'Permintaan Transfer Vendor Birthday Party Anak',
-                'catatan' => 'Transfer untuk vendor birthday party anak tanggal 18 Agustus 2025.',
-                'status' => 'ditolak',
-                'details' => [
-                    [
-                        'nama_rekening' => 'Kids Party Organizer',
-                        'keperluan' => 'Organizing Birthday Party',
-                        'event' => 'Birthday Party Alicia',
-                        'jumlah_transfer' => 5000000,
-                        'invoice_number' => 'INV-KP-005',
-                        'status_invoice' => 'belum_dibayar',
-                    ],
-                ],
+                'hal' => 'Transfer Vendor Operasional Kantor',
+                'catatan' => 'Transfer untuk keperluan operasional kantor bulan ini.',
+                'status' => 'disetujui',
+            ],
+            [
+                'no_nd' => 'ND/007/VIII/2025',
+                'tanggal' => '2025-08-20',
+                'sifat' => 'Biasa',
+                'hal' => 'Transfer Vendor Maintenance Equipment',
+                'catatan' => 'Transfer untuk maintenance peralatan kantor dan studio.',
+                'status' => 'draft',
+            ],
+            [
+                'no_nd' => 'ND/008/VIII/2025',
+                'tanggal' => '2025-08-25',
+                'sifat' => 'Urgent',
+                'hal' => 'Transfer Emergency Vendor',
+                'catatan' => 'Transfer emergency untuk vendor pengganti mendadak.',
+                'status' => 'diajukan',
+            ],
+            [
+                'no_nd' => 'ND/009/IX/2025',
+                'tanggal' => '2025-09-01',
+                'sifat' => 'Segera',
+                'hal' => 'Transfer Vendor Wedding September',
+                'catatan' => 'Transfer untuk vendor wedding di bulan September.',
+                'status' => 'disetujui',
+            ],
+            [
+                'no_nd' => 'ND/010/IX/2025',
+                'tanggal' => '2025-09-05',
+                'sifat' => 'Biasa',
+                'hal' => 'Transfer Vendor Operasional September',
+                'catatan' => 'Transfer untuk keperluan operasional bulan September.',
+                'status' => 'draft',
             ],
         ];
 
+        $created = 0;
+
         foreach ($notaDinasList as $ndData) {
-            // Create Nota Dinas
+            // Create Nota Dinas header only
             $notaDinas = NotaDinas::create([
                 'no_nd' => $ndData['no_nd'],
                 'tanggal' => $ndData['tanggal'],
@@ -193,30 +121,28 @@ class NotaDinasSeeder extends Seeder
                 'hal' => $ndData['hal'],
                 'catatan' => $ndData['catatan'],
                 'status' => $ndData['status'],
-                'approved_by' => in_array($ndData['status'], ['disetujui', 'dibayar']) ? $users->random()->id : null,
-                'approved_at' => in_array($ndData['status'], ['disetujui', 'dibayar']) ? now()->subDays(rand(1, 5)) : null,
+                'approved_by' => $ndData['status'] === 'disetujui' ? $users->random()->id : null,
+                'approved_at' => $ndData['status'] === 'disetujui' ? Carbon::now()->subDays(rand(1, 30)) : null,
             ]);
 
-            // Create Nota Dinas Details
-            foreach ($ndData['details'] as $detailData) {
-                NotaDinasDetail::create([
-                    'nota_dinas_id' => $notaDinas->id,
-                    'nama_rekening' => $detailData['nama_rekening'],
-                    'vendor_id' => $vendors->random()->id,
-                    'keperluan' => $detailData['keperluan'],
-                    'event' => $detailData['event'],
-                    'jumlah_transfer' => $detailData['jumlah_transfer'],
-                    'invoice_number' => $detailData['invoice_number'],
-                    'invoice_file' => null, // File akan diupload manual
-                    'bukti_transfer' => null, // File akan diupload manual
-                    'status_invoice' => $detailData['status_invoice'],
-                ]);
-            }
-
-            $this->command->info("Created Nota Dinas: {$ndData['no_nd']} with " . count($ndData['details']) . " details");
+            $created++;
+            $this->command->info("✅ Created Nota Dinas: {$ndData['no_nd']}");
         }
 
-        $this->command->info('NotaDinas seeder completed successfully!');
-        $this->command->info('Created ' . count($notaDinasList) . ' Nota Dinas records with details');
+        $this->command->info("🎉 NotaDinas seeder completed successfully!");
+        $this->command->info("📊 Created {$created} Nota Dinas header records");
+        
+        // Show summary
+        $this->command->table(
+            ['Metric', 'Count'],
+            [
+                ['Total Nota Dinas', $created],
+                ['Draft Status', NotaDinas::where('status', 'draft')->count()],
+                ['Diajukan Status', NotaDinas::where('status', 'diajukan')->count()],
+                ['Disetujui Status', NotaDinas::where('status', 'disetujui')->count()],
+            ]
+        );
+        
+        $this->command->info("💡 Note: Use NotaDinasDetailSeeder to add detail records to these Nota Dinas.");
     }
 }

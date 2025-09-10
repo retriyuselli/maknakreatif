@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'filament.auth' => \Filament\Http\Middleware\Authenticate::class,
             'check.expiration' => \App\Http\Middleware\CheckUserExpiration::class,
+            'project.access' => \App\Http\Middleware\CheckProjectAccess::class,
         ]);
         
         // Ensure proper web middleware group for Niaga Hoster
@@ -22,8 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
             \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
             \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-            \App\Http\Middleware\CheckUserExpiration::class,
         ]);
+        
+        // Apply CheckUserExpiration to web routes
+        $middleware->web(\App\Http\Middleware\CheckUserExpiration::class);
         
         // Handle method spoofing properly
         $middleware->web(prepend: [

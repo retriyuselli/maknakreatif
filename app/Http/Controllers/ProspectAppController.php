@@ -23,6 +23,16 @@ class ProspectAppController extends Controller
     }
 
     /**
+     * Display the comprehensive prospect registration form.
+     */
+    public function pendaftaran()
+    {
+        $industries = Industry::where('is_active', true)->orderBy('industry_name')->get();
+        
+        return view('front.pendaftaran', compact('industries'));
+    }
+
+    /**
      * Store a newly created prospect application.
      */
     public function store(Request $request)
@@ -35,8 +45,10 @@ class ProspectAppController extends Controller
             'company_name' => 'required|string|max:255',
             'industry_id' => 'required|exists:industries,id',
             'name_of_website' => 'nullable|string|max:255',
-            'user_size' => 'nullable|in:1-10,11-50,51-200,201-500,501-1000,1000+',
-            'reason_for_interest' => 'nullable|string|max:1000',
+            'user_size' => 'required|in:1-10,11-50,51-200,201-500,501-1000,1000+',
+            'service' => 'nullable|in:basic,standard,premium,enterprise',
+            'reason_for_interest' => 'required|string|max:1000',
+            'notes' => 'nullable|string|max:2000',
         ], [
             'full_name.required' => 'Nama lengkap wajib diisi.',
             'email.required' => 'Alamat email wajib diisi.',
@@ -46,8 +58,12 @@ class ProspectAppController extends Controller
             'company_name.required' => 'Nama perusahaan wajib diisi.',
             'industry_id.required' => 'Industri wajib dipilih.',
             'industry_id.exists' => 'Industri yang dipilih tidak valid.',
+            'user_size.required' => 'Ukuran perusahaan wajib dipilih.',
             'user_size.in' => 'Ukuran perusahaan tidak valid.',
+            'service.in' => 'Paket layanan tidak valid.',
+            'reason_for_interest.required' => 'Alasan ketertarikan wajib diisi.',
             'reason_for_interest.max' => 'Alasan minat maksimal 1000 karakter.',
+            'notes.max' => 'Catatan tambahan maksimal 2000 karakter.',
         ]);
 
         if ($validator->fails()) {
@@ -67,7 +83,9 @@ class ProspectAppController extends Controller
                 'industry_id' => $request->industry_id,
                 'name_of_website' => $request->name_of_website,
                 'user_size' => $request->user_size,
+                'service' => $request->service,
                 'reason_for_interest' => $request->reason_for_interest,
+                'notes' => $request->notes,
                 'status' => 'pending',
                 'submitted_at' => now(),
             ]);

@@ -5,8 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class RoleSeeder extends Seeder
 {
@@ -81,64 +79,7 @@ class RoleSeeder extends Seeder
             'view_products',
         ]);
 
-        // Create default users
-        $superAdminUser = User::firstOrCreate(
-            ['email' => 'superadmin@wofins.com'],
-            [
-                'name' => 'Super Admin',
-                'password' => Hash::make('password123'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $superAdminUser->assignRole('super_admin');
-
-        $accountManagerUser = User::firstOrCreate(
-            ['email' => 'rama@wofins.com'],
-            [
-                'name' => 'Rama Dhona Utama',
-                'password' => Hash::make('password123'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $accountManagerUser->assignRole('Account Manager');
-
-        $adminUser = User::firstOrCreate(
-            ['email' => 'qoyyum@wofins.com'],
-            [
-                'name' => 'Qoyyum',
-                'password' => Hash::make('password123'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $adminUser->assignRole('admin');
-
-        // Create additional Account Managers
-        $accountManager2 = User::firstOrCreate(
-            ['email' => 'adel@maknaonline.com'],
-            [
-                'name' => 'Adel',
-                'password' => Hash::make('password123'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $accountManager2->assignRole('Account Manager');
-
-        $accountManager3 = User::firstOrCreate(
-            ['email' => 'rina@wofins.com'],
-            [
-                'name' => 'Rina Mardiana',
-                'password' => Hash::make('password123'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $accountManager3->assignRole('Account Manager');
-
-        $this->command->info('Roles, permissions, and users created successfully!');
-        $this->command->info('Default users created:');
-        $this->command->info('- Super Admin: superadmin@wofins.com / password123');
-        $this->command->info('- Rama Dhona Utama: rama@wofins.com / password123');
-        $this->command->info('- Qoyyum: qoyyum@wofins.com / password123');
-        $this->command->info('- Adel: adel@maknaonline.com / password123');
-        $this->command->info('- Rina Mardiana: rina@wofins.com / password123');
+        $this->command->info('✅ Roles and permissions created successfully!');
+        $this->command->newLine();
     }
 }

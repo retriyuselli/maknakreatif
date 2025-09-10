@@ -63,7 +63,7 @@ class LaporanKeuangan extends Page
                     ) 
                     LIMIT 1
                 ) as prospect_name'),
-                DB::raw('NULL as name'), // Kolom 'name' untuk konsistensi union
+                DB::raw('NULL as vendor_name'), // Kolom vendor_name untuk konsistensi union
                 DB::raw('(
                     SELECT CONCAT(name, " (", no_rekening, ")")
                     FROM payment_methods
@@ -90,7 +90,12 @@ class LaporanKeuangan extends Page
                     ) 
                     LIMIT 1
                 ) as prospect_name'), // Mengambil prospect_name dari order terkait
-                DB::raw('NULL as name'), // Kolom 'name' untuk konsistensi union
+                DB::raw('(
+                    SELECT name 
+                    FROM vendors 
+                    WHERE vendors.id = expenses.vendor_id
+                    LIMIT 1
+                ) as vendor_name'), // Menambahkan nama vendor
                 DB::raw('(
                     SELECT CONCAT(name, " (", no_rekening, ")")
                     FROM payment_methods
@@ -107,7 +112,7 @@ class LaporanKeuangan extends Page
                 DB::raw('note as deskripsi'),
                 DB::raw('NULL as order_id'),
                 DB::raw('NULL as prospect_name'), // ExpenseOps tidak memiliki prospect_name
-                DB::raw('name as name'), // Mengambil kolom 'name' dari ExpenseOps
+                DB::raw('name as vendor_name'), // Menggunakan name dari ExpenseOps sebagai vendor_name
                 DB::raw('(
                     SELECT CONCAT(name, " (", no_rekening, ")")
                     FROM payment_methods
@@ -124,7 +129,7 @@ class LaporanKeuangan extends Page
                 DB::raw('keterangan as deskripsi'),
                 DB::raw('NULL as order_id'),
                 DB::raw('NULL as prospect_name'),
-                DB::raw('NULL as name'),
+                DB::raw('NULL as vendor_name'),
                 DB::raw('(
                     SELECT CONCAT(name, " (", no_rekening, ")")
                     FROM payment_methods
@@ -141,7 +146,7 @@ class LaporanKeuangan extends Page
                 DB::raw('note as deskripsi'),
                 DB::raw('NULL as order_id'),
                 DB::raw('NULL as prospect_name'),
-                DB::raw('NULL as name'),
+                DB::raw('NULL as vendor_name'),
                 DB::raw('(
                     SELECT CONCAT(name, " (", no_rekening, ")")
                     FROM payment_methods
@@ -203,10 +208,13 @@ class LaporanKeuangan extends Page
                 // Cek apakah keyword ada di kolom prospect_name (jika tidak kosong)
                 $inProspect = !empty($item->prospect_name) && stripos($item->prospect_name, $keyword) !== false;
 
+                // Cek apakah keyword ada di kolom vendor_name (jika tidak kosong)
+                $inVendor = !empty($item->vendor_name) && stripos($item->vendor_name, $keyword) !== false;
+
                 // Cek apakah keyword ada di kolom payment_method_details
                 $inPaymentMethod = !empty($item->payment_method_details) && stripos($item->payment_method_details, $keyword) !== false;
 
-                return $inDeskripsi || $inProspect || $inPaymentMethod;
+                return $inDeskripsi || $inProspect || $inVendor || $inPaymentMethod;
             });
         }
 

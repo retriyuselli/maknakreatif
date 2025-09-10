@@ -19,6 +19,14 @@ class ExpenseOps extends Model
         'no_nd',
         'note',
         'kategori_transaksi',
+        // NotaDinas integration fields
+        'nota_dinas_id',
+        'nota_dinas_detail_id',
+        'vendor_id',
+        'bank_name',
+        'account_holder',
+        'bank_account',
+        'tanggal_transfer',
     ];
 
     /**
@@ -28,6 +36,7 @@ class ExpenseOps extends Model
      */
     protected $casts = [
         'date_expense' => 'date',
+        'tanggal_transfer' => 'date',
         'amount' => 'decimal:2',
     ];
 
@@ -60,6 +69,22 @@ class ExpenseOps extends Model
         return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
     }
 
+    // NotaDinas integration relationships
+    public function notaDinas()
+    {
+        return $this->belongsTo(NotaDinas::class, 'nota_dinas_id');
+    }
+
+    public function notaDinasDetail()
+    {
+        return $this->belongsTo(NotaDinasDetail::class, 'nota_dinas_detail_id');
+    }
+
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class, 'vendor_id');
+    }
+
     // Query scope for filtering by amount range
     public function scopeAmountRange($query, $range)
     {
@@ -78,5 +103,49 @@ class ExpenseOps extends Model
             $query
                 ->when($dateFrom, fn($q) => $q->whereDate('date_expense', '>=', $dateFrom))
                 ->when($dateUntil, fn($q) => $q->whereDate('date_expense', '<=', $dateUntil));
+    }
+
+    /**
+     * Boot method to add validation and events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Add validation before saving
+        static::saving(function ($expenseOps) {
+            if ($expenseOps->nota_dinas_detail_id) {
+                // First, cleanup any soft deleted records that might cause constraint conflicts
+                static::onlyTrashed()
+                    ->where('nota_dinas_detail_id', $expenseOps->nota_dinas_detail_id)
+                    ->forceDelete();
+                
+                // Check if nota_dinas_detail_id already exists (excluding current record)
+                $existingExpenseOps = static::where('nota_dinas_detail_id', $expenseOps->nota_dinas_detail_id)
+                    ->when($expenseOps->exists, function ($query) use ($expenseOps) {
+                        return $query->where('id', '!=', $expenseOps->id);
+                    })
+                    ->first();
+
+                if ($existingExpenseOps) {
+                    $notaDinasDetail = \App\Models\NotaDinasDetail::with('vendor')->find($expenseOps->nota_dinas_detail_id);
+                    $vendorName = $notaDinasDetail?->vendor?->name ?? 'Vendor ini';
+                    $keperluan = $notaDinasDetail?->keperluan ?? 'item ini';
+                    throw new \Exception("Detail Nota Dinas untuk vendor {$vendorName} (keperluan: {$keperluan}) sudah memiliki ExpenseOps record. Silakan pilih detail nota dinas yang berbeda.");
+                }
+            }
+        });
+        
+        // Clean up soft deleted records periodically when new records are created
+        static::created(function ($expenseOps) {
+            // Clean up old soft deleted records to prevent constraint conflicts
+            $cleanupCount = static::onlyTrashed()
+                ->where('created_at', '<', now()->subDays(7)) // Clean records older than 7 days
+                ->forceDelete();
+            
+            if ($cleanupCount > 0) {
+                \Illuminate\Support\Facades\Log::info("Cleaned up {$cleanupCount} old soft deleted ExpenseOps records");
+            }
+        });
     }
 }

@@ -5,9 +5,9 @@
             <!-- Category Badge & Version -->
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center space-x-3">
-                    <div class="flex items-center px-3 py-1 rounded-full text-sm font-medium" 
+                    <div class="flex items-center px-3 py-1 rounded-full text-sm font-medium gap-3" 
                          style="background-color: {{ $record->category->color }}20; color: {{ $record->category->color }}">
-                        <x-heroicon-o-folder class="w-4 h-4 mr-2" />
+                        <x-heroicon-o-folder class="w-4 h-4" />
                         {{ $record->category->name }}
                     </div>
                 </div>
@@ -103,9 +103,9 @@
         <!-- Steps Section -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
                     <x-heroicon-o-list-bullet class="w-5 h-5 text-blue-600" />
-                    Langkah-langkah Prosedur
+                    <span>Langkah-langkah Prosedur</span>
                     <span class="ml-auto text-xs font-medium px-3 py-1 rounded-full" 
                           style="background-color: #dbeafe; color: #1e40af; border: 1px solid #3b82f6;">
                         {{ $record->steps_count }} Langkah
@@ -139,8 +139,8 @@
                                         
                                         @if(!empty($step['notes']))
                                             <div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 rounded-r-lg mt-3">
-                                                <div class="flex items-start">
-                                                    <x-heroicon-o-light-bulb class="w-4 h-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                                                <div class="flex items-start gap-3">
+                                                    <x-heroicon-o-light-bulb class="w-4 h-4 text-yellow-600 flex-shrink-0" />
                                                     <div>
                                                         <p class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">Catatan Penting:</p>
                                                         <div class="text-sm dark:text-yellow-300 notes-content">
@@ -168,9 +168,9 @@
         @if($record->supporting_documents && count($record->supporting_documents) > 0)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                        <x-heroicon-o-paper-clip class="w-5 h-5 mr-2 text-green-600" />
-                        Dokumen Pendukung
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
+                        <x-heroicon-o-paper-clip class="w-5 h-5 text-green-600" />
+                        <span>Dokumen Pendukung</span>
                         <span class="ml-auto text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full">
                             {{ count($record->supporting_documents) }} File
                         </span>
@@ -181,7 +181,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($record->supporting_documents as $document)
                             <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow hover:border-blue-300 dark:hover:border-blue-500">
-                                <div class="flex items-center">
+                                <div class="flex items-center gap-3">
                                     @php
                                         $extension = pathinfo($document, PATHINFO_EXTENSION);
                                         $iconClass = match(strtolower($extension)) {
@@ -231,9 +231,9 @@
         @if($record->revisions && $record->revisions->count() > 0)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                        <x-heroicon-o-clock class="w-5 h-5 mr-2 text-orange-600" />
-                        Riwayat Revisi
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
+                        <x-heroicon-o-clock class="w-5 h-5 text-orange-600" />
+                        <span>Riwayat Revisi</span>
                         <span class="ml-auto text-sm bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-3 py-1 rounded-full">
                             {{ $record->revisions->count() }} Revisi
                         </span>
@@ -243,7 +243,7 @@
                 <div class="p-6">
                     <div class="space-y-4">
                         @foreach($record->revisions->take(5) as $revision)
-                            <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg gap-3">
                                 <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
                                     <x-heroicon-o-pencil class="w-4 h-4 text-orange-600" />
                                 </div>

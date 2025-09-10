@@ -28,6 +28,7 @@ class ExpenseResource extends Resource
             ->schema([
                 Forms\Components\Select::make('order_id')
                     ->relationship('order', 'name')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record?->name ?? 'No Name')
                     ->required()
                     ->preload()
                     ->disabled()
@@ -35,6 +36,7 @@ class ExpenseResource extends Resource
                     ->searchable(),
                 Forms\Components\Select::make('vendor_id')
                     ->relationship('vendor', 'name')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record?->name ?? 'No Vendor')
                     ->disabled()
                     ->required()
                     ->label('Vendor')
@@ -73,6 +75,7 @@ class ExpenseResource extends Resource
                     ->stripCharacters(','),
                 Forms\Components\Select::make('payment_method_id')
                     ->relationship('paymentMethod', 'no_rekening')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record?->no_rekening ?? 'No Account')
                     ->disabled()
                     ->label('Sumber pembayaran')
                     ->required(),
@@ -95,13 +98,15 @@ class ExpenseResource extends Resource
                     ->label('Project')
                     ->sortable()
                     ->copyable()
-                    ->copyMessage('Vendor copied'),
+                    ->copyMessage('Project copied')
+                    ->formatStateUsing(fn ($state) => $state ?? 'No Project'),
                     
                 Tables\Columns\TextColumn::make('vendor.name')
                     ->searchable()
                     ->label('Vendor')
                     ->copyable()
-                    ->copyMessage('Vendor copied'),
+                    ->copyMessage('Vendor copied')
+                    ->formatStateUsing(fn ($state) => $state ?? 'No Vendor'),
                     
                 Tables\Columns\TextColumn::make('note')
                     ->searchable()
@@ -120,7 +125,8 @@ class ExpenseResource extends Resource
                     ->searchable()
                     ->label('Sumber Pembayaran')
                     ->description(fn ($record) => $record->paymentMethod?->no_rekening ?? 'N/A')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state ?? 'No Bank'),
                     
                 Tables\Columns\TextColumn::make('date_expense')
                     ->date('d M Y')
@@ -173,8 +179,205 @@ class ExpenseResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
+                    // Basic CRUD Actions
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->label('Hapus Terpilih')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription('Apakah Anda yakin ingin menghapus expense yang dipilih? Data tidak bisa dikembalikan.')
+                        ->modalSubmitActionLabel('Ya, Hapus')
+                        ->modalCancelActionLabel('Batal'),
+                        
+                    Tables\Actions\RestoreBulkAction::make()
+                        ->label('Pulihkan Terpilih')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('success'),
+                        
+                    Tables\Actions\ForceDeleteBulkAction::make()
+                        ->label('Hapus Permanen')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription('PERHATIAN: Data akan dihapus secara permanen dan tidak dapat dikembalikan!')
+                        ->modalSubmitActionLabel('Ya, Hapus Permanen')
+                        ->modalCancelActionLabel('Batal'),
+
+                    // Export Actions
+                    Tables\Actions\BulkAction::make('export_excel')
+                        ->label('Export ke Excel')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('success')
+                        ->action(function ($records) {
+                            return response()->streamDownload(function () use ($records) {
+                                $csv = "Vendor,Keterangan,No ND,Tanggal,Nominal,Sumber Pembayaran\n";
+                                foreach ($records as $record) {
+                                    $csv .= sprintf(
+                                        '%s,%s,%s,%s,%s,%s',
+                                        $record->vendor?->name ?? 'N/A',
+                                        $record->note,
+                                        $record->no_nd,
+                                        $record->date_expense?->format('d/m/Y') ?? 'N/A',
+                                        number_format($record->amount, 0, ',', '.'),
+                                        $record->paymentMethod?->bank_name ?? 'N/A'
+                                    ) . "\n";
+                                }
+                                echo $csv;
+                            }, 'expense_export_' . now()->format('Y-m-d_H-i-s') . '.csv');
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    // Financial Actions
+                    Tables\Actions\BulkAction::make('calculate_total')
+                        ->label('Hitung Total')
+                        ->icon('heroicon-o-calculator')
+                        ->color('info')
+                        ->action(function ($records) {
+                            $total = $records->sum('amount');
+                            $count = $records->count();
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title('Kalkulasi Selesai')
+                                ->body("Total dari {$count} expense terpilih: Rp " . number_format($total, 0, ',', '.'))
+                                ->success()
+                                ->icon('heroicon-o-banknotes')
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    // Status Update Actions
+                    Tables\Actions\BulkAction::make('mark_verified')
+                        ->label('Tandai Terverifikasi')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(function ($records) {
+                            $updated = 0;
+                            foreach ($records as $record) {
+                                // Assuming there's a verified_at field or similar
+                                $record->update(['verified_at' => now()]);
+                                $updated++;
+                            }
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title('Verifikasi Berhasil')
+                                ->body("{$updated} expense telah ditandai sebagai terverifikasi")
+                                ->success()
+                                ->send();
+                        })
+                        ->requiresConfirmation()
+                        ->modalDescription('Tandai expense terpilih sebagai terverifikasi?')
+                        ->deselectRecordsAfterCompletion(),
+
+                    // Period Actions
+                    Tables\Actions\BulkAction::make('update_period')
+                        ->label('Update Periode')
+                        ->icon('heroicon-o-calendar')
+                        ->color('warning')
+                        ->form([
+                            Forms\Components\DatePicker::make('new_date')
+                                ->label('Tanggal Baru')
+                                ->required()
+                                ->default(now()),
+                        ])
+                        ->action(function ($records, array $data) {
+                            $updated = 0;
+                            foreach ($records as $record) {
+                                $record->update(['date_expense' => $data['new_date']]);
+                                $updated++;
+                            }
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title('Update Berhasil')
+                                ->body("{$updated} expense telah diupdate tanggalnya")
+                                ->success()
+                                ->send();
+                        })
+                        ->modalSubmitActionLabel('Update')
+                        ->modalCancelActionLabel('Batal')
+                        ->deselectRecordsAfterCompletion(),
+
+                    // Duplicate Action
+                    Tables\Actions\BulkAction::make('duplicate')
+                        ->label('Duplikasi')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->color('gray')
+                        ->action(function ($records) {
+                            $duplicated = 0;
+                            foreach ($records as $record) {
+                                $newRecord = $record->replicate();
+                                $newRecord->note = $record->note . ' (Copy)';
+                                $newRecord->no_nd = $record->no_nd . '-COPY';
+                                $newRecord->date_expense = now();
+                                $newRecord->save();
+                                $duplicated++;
+                            }
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title('Duplikasi Berhasil')
+                                ->body("{$duplicated} expense telah diduplikasi")
+                                ->success()
+                                ->send();
+                        })
+                        ->requiresConfirmation()
+                        ->modalDescription('Duplikasi expense terpilih dengan tanggal hari ini?')
+                        ->deselectRecordsAfterCompletion(),
+
+                    // Generate Report
+                    Tables\Actions\BulkAction::make('generate_report')
+                        ->label('Buat Laporan')
+                        ->icon('heroicon-o-document-text')
+                        ->color('primary')
+                        ->form([
+                            Forms\Components\TextInput::make('report_title')
+                                ->label('Judul Laporan')
+                                ->default('Laporan Pengeluaran')
+                                ->required(),
+                            Forms\Components\Textarea::make('report_notes')
+                                ->label('Catatan Laporan')
+                                ->placeholder('Tambahkan catatan untuk laporan ini...')
+                                ->rows(3),
+                        ])
+                        ->action(function ($records, array $data) {
+                            $total = $records->sum('amount');
+                            $vendors = $records->pluck('vendor.name')->filter()->unique();
+                            
+                            $reportContent = [
+                                'title' => $data['report_title'],
+                                'generated_at' => now()->format('d/m/Y H:i:s'),
+                                'total_records' => $records->count(),
+                                'total_amount' => number_format($total, 0, ',', '.'),
+                                'vendors_involved' => $vendors->count(),
+                                'notes' => $data['report_notes'] ?? '',
+                                'records' => $records->map(function ($record) {
+                                    return [
+                                        'vendor' => $record->vendor?->name ?? 'N/A',
+                                        'note' => $record->note,
+                                        'amount' => number_format($record->amount, 0, ',', '.'),
+                                        'date' => $record->date_expense?->format('d/m/Y') ?? 'N/A',
+                                    ];
+                                })->toArray()
+                            ];
+                            
+                            return response()->streamDownload(function () use ($reportContent) {
+                                echo "=== {$reportContent['title']} ===\n\n";
+                                echo "Dibuat pada: {$reportContent['generated_at']}\n";
+                                echo "Total Records: {$reportContent['total_records']}\n";
+                                echo "Total Amount: Rp {$reportContent['total_amount']}\n";
+                                echo "Vendor Terlibat: {$reportContent['vendors_involved']}\n\n";
+                                
+                                if (!empty($reportContent['notes'])) {
+                                    echo "Catatan: {$reportContent['notes']}\n\n";
+                                }
+                                
+                                echo "=== DETAIL EXPENSES ===\n";
+                                foreach ($reportContent['records'] as $record) {
+                                    echo "- {$record['vendor']}: {$record['note']} (Rp {$record['amount']}) - {$record['date']}\n";
+                                }
+                            }, 'expense_report_' . now()->format('Y-m-d_H-i-s') . '.txt');
+                        })
+                        ->modalSubmitActionLabel('Generate')
+                        ->modalCancelActionLabel('Batal')
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->striped()

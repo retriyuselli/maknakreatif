@@ -18,6 +18,11 @@ class CheckUserExpiration
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Skip checks for Livewire internal requests
+        if ($request->is('livewire/*') || $request->header('X-Livewire')) {
+            return $next($request);
+        }
+        
         if (Auth::check()) {
             /** @var User $user */
             $user = Auth::user();

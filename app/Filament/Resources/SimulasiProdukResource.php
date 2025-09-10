@@ -266,4 +266,14 @@ class SimulasiProdukResource extends Resource
         // }
         return parent::getEloquentQuery();
     }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Total simulasi yang sedang diproses';
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
 }

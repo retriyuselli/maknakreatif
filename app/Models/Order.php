@@ -31,6 +31,7 @@ class Order extends Model
         'promo',
         'penambahan',
         'pengurangan',
+        'grand_total',
         'change_amount',
         'is_paid',
         'closing_date',
@@ -249,5 +250,26 @@ class Order extends Model
     public function getUangDiterimaAttribute()
     {
         return $this->getBayarAttribute() - $this->getTotPengeluaranAttribute();
+    }
+
+    /**
+     * Calculate and set grand_total before saving
+     */
+    public function calculateAndSetGrandTotal()
+    {
+        $this->grand_total = $this->total_price + $this->penambahan - $this->promo - $this->pengurangan;
+    }
+
+    /**
+     * Boot method untuk auto-calculate grand_total
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($order) {
+            // Auto calculate grand_total before saving
+            $order->calculateAndSetGrandTotal();
+        });
     }
 }

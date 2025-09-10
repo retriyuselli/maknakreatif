@@ -143,6 +143,31 @@ class SopResource extends Resource
                                     ->default(true)
                                     ->helperText('SOP yang tidak aktif tidak akan ditampilkan ke user'),
                             ]),
+                            
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Select::make('created_by')
+                                    ->label('Dibuat Oleh')
+                                    ->relationship('creator', 'name')
+                                    ->default(Auth::id())
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->disabled(fn (?Sop $record) => $record !== null)
+                                    ->dehydrated()
+                                    ->helperText('User yang membuat SOP ini'),
+                                    
+                                Forms\Components\Select::make('updated_by')
+                                    ->label('Diperbarui Oleh')
+                                    ->relationship('updater', 'name')
+                                    ->default(Auth::id())
+                                    ->searchable()
+                                    ->preload()
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->helperText('User yang terakhir memperbarui SOP ini')
+                                    ->visible(fn (?Sop $record) => $record !== null),
+                            ]),
                     ]),
             ])
             ->columns(1);
@@ -244,13 +269,6 @@ class SopResource extends Resource
                         return redirect()->route('filament.admin.resources.sops.edit', $newSop);
                     })
                     ->requiresConfirmation(),
-                    
-                Tables\Actions\Action::make('view_public')
-                    ->label('Lihat Publik')
-                    ->icon('heroicon-o-globe-alt')
-                    ->url(fn (Sop $record): string => route('sop.show', $record->id))
-                    ->openUrlInNewTab()
-                    ->color('success'),
                     
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),

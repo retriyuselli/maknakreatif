@@ -51,7 +51,7 @@ class OrderSeeder extends Seeder
             return;
         }
 
-        // Create 50 orders with only basic project information (Wizard Step 1: Informasi Proyek)
+        // Create 10 orders with only basic project information (Wizard Step 1: Informasi Proyek)
         $orders = [];
         $statuses = ['pending', 'processing', 'done', 'cancelled'];
         
@@ -66,7 +66,7 @@ class OrderSeeder extends Seeder
             $startNumber = isset($matches[1]) ? (int)$matches[1] + 1 : 100000;
         }
         
-        for ($i = 1; $i <= 50; $i++) {
+        for ($i = 1; $i <= 10; $i++) {
             $prospect = $prospects->random();
             $user = $users->random();
             $employee = $employees->isEmpty() ? null : $employees->random();
@@ -211,7 +211,7 @@ class OrderSeeder extends Seeder
             }
         }
 
-        $this->command->info('50 orders with project information, products, payments, and expenses created successfully!');
+        $this->command->info('10 orders with project information, products, payments, and expenses created successfully!');
     }
     
     /**

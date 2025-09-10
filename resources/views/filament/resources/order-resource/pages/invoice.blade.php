@@ -1,6 +1,5 @@
 <x-filament-panels::page>
 
-    {{-- Memuat file CSS khusus untuk halaman invoice --}}
     <link rel="stylesheet" href="{{ asset('assets/invoice/invoice.css') }}">
 
     <div class="bg-white shadow-m border border-gray-200 rounded-xl p-4 sm:p-6 lg:p-8 ring-gray-100">
@@ -17,8 +16,8 @@
             </div>
         </div>
 
-        <!-- Download Button -->
-        <div class="mt-6 flex justify-end">
+        <!-- Download Buttons -->
+        <div class="mt-6 flex justify-end gap-3">
             <a href="{{ route('invoice.download', ['order' => $order]) }}" target="_blank"
                 class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 border border-transparent rounded-md font-semibold text-sm text-white hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                 <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -138,6 +137,15 @@
                                 {{ number_format($order->bayar, 0, ',', '.') }}
                             </td>
                         </tr>
+                        <tr>
+                            <td class="px-4 py-2 border-b border-gray-200">Total Pembayaran Vendor</td>
+                            <td class="text-right px-4 py-2 border-b border-gray-200">Rp
+                                @php
+                                    $totalVendor = $order->expenses()->sum('amount');
+                                @endphp
+                                {{ number_format($totalVendor, 0, ',', '.') }}
+                            </td>
+                        </tr>
                         <tr class="total">
                             <td class="font-semibold px-4 py-2 border-b border-gray-200">Sisa Tagihan (Balance
                                 Due)
@@ -154,7 +162,7 @@
                     <div class="profit-loss-card-content">
                         <div class="profit-loss-card-details">
                             <p class="profit-loss-card-title">Laba / Rugi Kotor</p>
-                            <p class="profit-loss-card-description">Grand Total - Total Pengeluaran</p>
+                            <p class="profit-loss-card-description">Grand Total - Total Pembayaran Vendor</p>
                         </div>
                         <p class="profit-loss-card-amount">
                             Rp {{ number_format($profitLoss, 0, ',', '.') }}
@@ -318,6 +326,7 @@
                         <tr>
                             <th class="bg-gray-100 px-4 py-2 text-left text-gray-700 font-medium">Tgl</th>
                             <th class="bg-gray-100 px-4 py-2 text-left text-gray-700 font-medium">Vendor</th>
+                            <th class="bg-gray-100 px-4 py-2 text-left text-gray-700 font-medium">Keterangan</th>
                             <th class="bg-gray-100 px-4 py-2 text-left text-gray-700 font-medium">No ND</th>
                             <th class="bg-gray-100 px-4 py-2 text-right text-gray-700 font-medium">Jumlah</th>
                         </tr>
@@ -336,10 +345,14 @@
                                     {{ $expense->vendor->name ?? 'N/A' }}
                                 </td>
                                 <td class="px-4 py-2 border-b border-gray-200">
+                                    {{ ucwords(strtolower($expense->note ?? 'N/A')) }}
+                                </td>
+                                <td class="px-4 py-2 border-b border-gray-200">
                                     {{ $expense->no_nd ? 'ND-0' . $expense->no_nd : '-' }}
                                 </td>
                                 <td class="text-right px-4 py-2 border-b border-gray-200">Rp
-                                    {{ number_format($expense->amount ?? 0, 0, ',', '.') }}</td>
+                                    {{ number_format($expense->amount ?? 0, 0, ',', '.') }}
+                                </td>
                             </tr>
                         @empty
                             <tr>

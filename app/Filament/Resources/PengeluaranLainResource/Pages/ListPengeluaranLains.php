@@ -13,7 +13,9 @@ class ListPengeluaranLains extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Tambah Pengeluaran Lainnya')
+                ->icon('heroicon-o-plus'),
         ];
     }
 }

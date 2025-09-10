@@ -32,6 +32,9 @@ class ProspectApp extends Model
 
     protected $casts = [
         'submitted_at' => 'datetime',
+        'tgl_bayar' => 'date',
+        'harga' => 'integer',
+        'bayar' => 'integer',
         'status' => 'string',
     ];
 

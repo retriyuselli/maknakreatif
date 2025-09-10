@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Collection;
 use Filament\Support\RawJs;
 use Illuminate\Support\Str;
 use Filament\Support\Enums\FontWeight;
@@ -284,6 +285,22 @@ class VendorResource extends Resource
                     ->copyMessageDuration(1500)
                     ->formatStateUsing(fn (string $state) => '+62 ' . $state),
 
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'vendor' => 'primary',
+                        'product' => 'success',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'vendor' => 'Vendor',
+                        'product' => 'Product',
+                        default => ucfirst($state),
+                    }),
+
                 Tables\Columns\TextColumn::make('harga_publish')
                     ->label('Published Price')
                     ->money('IDR')
@@ -317,6 +334,49 @@ class VendorResource extends Resource
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('usage_status')
+                    ->label('Usage Status')
+                    ->badge()
+                    ->getStateUsing(function (Vendor $record): string {
+                        $productCount = $record->productVendors()->count();
+                        $expenseCount = $record->vendors()->count();
+                        $notaDinasCount = $record->notaDinasDetails()->count();
+                        
+                        if ($productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0) {
+                            return 'In Use';
+                        }
+                        return 'Available';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'In Use' => 'warning',
+                        'Available' => 'success',
+                        default => 'gray',
+                    })
+                    ->tooltip(function (Vendor $record): string {
+                        $productCount = $record->productVendors()->count();
+                        $expenseCount = $record->vendors()->count();
+                        $notaDinasCount = $record->notaDinasDetails()->count();
+                        
+                        $details = [];
+                        if ($productCount > 0) {
+                            $details[] = "{$productCount} product(s)";
+                        }
+                        if ($expenseCount > 0) {
+                            $details[] = "{$expenseCount} expense(s)";
+                        }
+                        if ($notaDinasCount > 0) {
+                            $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                        }
+                        
+                        if (!empty($details)) {
+                            return 'Used in: ' . implode(', ', $details);
+                        }
+                        return 'Not used in any products, expenses, or nota dinas details';
+                    })
+                    ->sortable(false)
+                    ->searchable(false)
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created Date')
                     ->dateTime()
@@ -336,6 +396,44 @@ class VendorResource extends Resource
                     ->preload()
                     ->multiple(),
 
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'vendor' => 'Vendor',
+                        'product' => 'Product',
+                    ])
+                    ->multiple(),
+
+                Tables\Filters\Filter::make('usage_status')
+                    ->label('Usage Status')
+                    ->form([
+                        Forms\Components\Select::make('usage')
+                            ->label('Filter by Usage')
+                            ->options([
+                                'in_use' => 'In Use',
+                                'available' => 'Available',
+                            ])
+                            ->placeholder('All Vendors'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['usage'] === 'in_use',
+                            fn (Builder $query): Builder => $query->whereHas('productVendors')
+                                ->orWhereHas('vendors') // expenses
+                                ->orWhereHas('notaDinasDetails'), // nota dinas details
+                        )->when(
+                            $data['usage'] === 'available',
+                            fn (Builder $query): Builder => $query->whereDoesntHave('productVendors')
+                                ->whereDoesntHave('vendors') // expenses
+                                ->whereDoesntHave('notaDinasDetails'), // nota dinas details
+                        );
+                    })
+                    ->indicateUsing(function (array $data): ?string {
+                        if ($data['usage']) {
+                            return 'Usage: ' . ($data['usage'] === 'in_use' ? 'In Use' : 'Available');
+                        }
+                        return null;
+                    }),
+
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -343,7 +441,414 @@ class VendorResource extends Resource
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make()
-                        ->requiresConfirmation(),
+                        ->icon('heroicon-m-trash')
+                        ->tooltip('Delete vendor')
+                        ->requiresConfirmation()
+                        ->modalHeading('Delete Vendor')
+                        ->modalDescription('Are you sure you want to delete this vendor? This action cannot be undone.')
+                        ->modalSubmitActionLabel('Yes, delete')
+                        ->modalIcon('heroicon-o-exclamation-triangle')
+                        ->modalIconColor('danger')
+                        ->visible(function (Vendor $record): bool {
+                            $productCount = $record->productVendors()->count();
+                            $expenseCount = $record->vendors()->count();
+                            $notaDinasCount = $record->notaDinasDetails()->count();
+                            return $productCount === 0 && $expenseCount === 0 && $notaDinasCount === 0;
+                        })
+                        ->before(function (?Vendor $record) {
+                            if (!$record) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Error')
+                                    ->body('Vendor data not found. Please refresh the page and try again.')
+                                    ->persistent()
+                                    ->send();
+                                return false;
+                            }
+                            
+                            Notification::make()
+                                ->info()
+                                ->title('Processing')
+                                ->body('Validating vendor for deletion...')
+                                ->send();
+                        })
+                        ->action(function (?Vendor $record) {
+                            if (!$record) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Deletion Failed')
+                                    ->body('Vendor data not found. May have been already deleted or moved.')
+                                    ->persistent()
+                                    ->send();
+                                return false;
+                            }
+
+                            try {
+                                $record->refresh();
+                            } catch (\Exception $e) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Deletion Failed')
+                                    ->body('Cannot access vendor data. May have been deleted by another user.')
+                                    ->persistent()
+                                    ->send();
+                                return false;
+                            }
+
+                            // Double check for associations
+                            $productCount = $record->productVendors()->count();
+                            $expenseCount = $record->vendors()->count();
+                            
+                            if ($productCount > 0 || $expenseCount > 0) {
+                                $details = [];
+                                if ($productCount > 0) {
+                                    $details[] = "{$productCount} product(s)";
+                                }
+                                if ($expenseCount > 0) {
+                                    $details[] = "{$expenseCount} expense(s)";
+                                }
+                                
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Deletion Not Allowed')
+                                    ->body("Vendor '{$record->name}' cannot be deleted because it is being used in " . implode(' and ', $details) . ". Please remove these associations first.")
+                                    ->persistent()
+                                    ->send();
+                                return false;
+                            }
+                            
+                            try {
+                                $vendorName = $record->name ?? 'Unknown Vendor';
+                                $record->delete();
+                                
+                                Notification::make()
+                                    ->success()
+                                    ->title('Vendor Successfully Deleted')
+                                    ->body("'{$vendorName}' has been deleted from the system.")
+                                    ->duration(5000)
+                                    ->send();
+                                    
+                                return true;
+                                
+                            } catch (\Illuminate\Database\QueryException $e) {
+                                $errorCode = $e->getCode();
+                                if ($errorCode === '23000') {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('Deletion Failed - Data Constraint')
+                                        ->body('This vendor cannot be deleted because it is referenced by other data in the system.')
+                                        ->persistent()
+                                        ->send();
+                                } else {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('Database Error')
+                                        ->body('A database error occurred while deleting the vendor. Please try again later.')
+                                        ->persistent()
+                                        ->send();
+                                }
+                                return false;
+                                
+                            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Vendor Already Deleted')
+                                    ->body('This vendor appears to have been already deleted by another user.')
+                                    ->send();
+                                return false;
+                                
+                            } catch (\Exception $e) {
+                                Log::error('Vendor deletion failed', [
+                                    'vendor_id' => $record->id ?? 'unknown',
+                                    'error' => $e->getMessage(),
+                                    'trace' => $e->getTraceAsString()
+                                ]);
+                                
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Unexpected Error')
+                                    ->body('An unexpected error occurred while deleting the vendor. System administrator has been notified.')
+                                    ->persistent()
+                                    ->send();
+                                return false;
+                            }
+                        }),
+
+                    Tables\Actions\Action::make('cannot_delete')
+                        ->label('Cannot Delete')
+                        ->icon('heroicon-m-shield-exclamation')
+                        ->color('gray')
+                        ->tooltip('This vendor cannot be deleted because it is being used')
+                        ->visible(function (Vendor $record): bool {
+                            $productCount = $record->productVendors()->count();
+                            $expenseCount = $record->vendors()->count();
+                            $notaDinasCount = $record->notaDinasDetails()->count();
+                            return $productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0;
+                        })
+                        ->action(function (Vendor $record) {
+                            $productCount = $record->productVendors()->count();
+                            $expenseCount = $record->vendors()->count();
+                            $notaDinasCount = $record->notaDinasDetails()->count();
+                            
+                            $details = [];
+                            if ($productCount > 0) {
+                                $details[] = "{$productCount} product(s)";
+                            }
+                            if ($expenseCount > 0) {
+                                $details[] = "{$expenseCount} expense(s)";
+                            }
+                            if ($notaDinasCount > 0) {
+                                $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                            }
+                            
+                            Notification::make()
+                                ->warning()
+                                ->title('Cannot Delete Vendor')
+                                ->body("'{$record->name}' cannot be deleted because it has associated " . implode(' and ', $details) . ". Please remove these associations first.")
+                                ->persistent()
+                                ->send();
+                        }),
+                    Tables\Actions\Action::make('view_usage')
+                        ->label('View Usage')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->modalHeading(fn (Vendor $record) => 'Usage Details for: ' . $record->name)
+                        ->modalDescription('See where this vendor is currently being used')
+                        ->modalContent(function (Vendor $record) {
+                            $productCount = $record->productVendors()->count();
+                            $expenseCount = $record->vendors()->count();
+                            
+                            $content = '<div class="space-y-4">';
+                            
+                            if ($productCount > 0) {
+                                $products = $record->productVendors()
+                                    ->with('product')
+                                    ->get()
+                                    ->groupBy('product.name');
+                                
+                                $content .= '<div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-yellow-800 mb-2">Used in Products (' . $productCount . ' items)</h3>';
+                                $content .= '<ul class="list-disc list-inside text-yellow-700 space-y-1">';
+                                
+                                foreach ($products as $productName => $items) {
+                                    $totalQty = $items->sum('quantity');
+                                    $content .= '<li>' . $productName . ' (Quantity: ' . $totalQty . ')</li>';
+                                }
+                                
+                                $content .= '</ul></div>';
+                            }
+                            
+                            if ($expenseCount > 0) {
+                                $content .= '<div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-blue-800 mb-2">Related Expenses</h3>';
+                                $content .= '<p class="text-blue-700">' . $expenseCount . ' expense transaction(s) are associated with this vendor.</p>';
+                                $content .= '</div>';
+                            }
+                            
+                            if ($productCount === 0 && $expenseCount === 0) {
+                                $content .= '<div class="p-4 bg-green-50 border border-green-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-green-800 mb-2">No Usage Found</h3>';
+                                $content .= '<p class="text-green-700">This vendor is not currently used in any products or expenses and can be safely deleted.</p>';
+                                $content .= '</div>';
+                            }
+                            
+                            $content .= '</div>';
+                            
+                            return new \Illuminate\Support\HtmlString($content);
+                        })
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Close'),
+                    Tables\Actions\Action::make('view_products')
+                        ->label('View Products')
+                        ->icon('heroicon-o-shopping-bag')
+                        ->color('success')
+                        ->modalHeading(fn (Vendor $record) => 'Products using: ' . $record->name)
+                        ->modalDescription('Detailed list of all products that use this vendor')
+                        ->visible(fn (Vendor $record) => $record->productVendors()->count() > 0)
+                        ->modalContent(function (Vendor $record) {
+                            $productVendors = $record->productVendors()
+                                ->with(['product.category'])
+                                ->orderBy('created_at', 'desc')
+                                ->get();
+                            
+                            $content = '<div class="space-y-4">';
+                            
+                            if ($productVendors->count() > 0) {
+                                $content .= '<div class="p-4 bg-green-50 border border-green-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-green-800 mb-4">Products List (' . $productVendors->count() . ' entries)</h3>';
+                                
+                                // Group by product
+                                $groupedProducts = $productVendors->groupBy('product.name');
+                                
+                                foreach ($groupedProducts as $productName => $items) {
+                                    $product = $items->first()->product;
+                                    $totalQuantity = $items->sum('quantity');
+                                    
+                                    $content .= '<div class="mb-4 p-3 bg-white border border-green-300 rounded-lg">';
+                                    $content .= '<div class="flex justify-between items-start mb-2">';
+                                    $content .= '<h4 class="font-medium text-green-900">' . $productName . '</h4>';
+                                    $content .= '<span class="text-sm text-green-600 bg-green-100 px-2 py-1 rounded">Total Qty: ' . $totalQuantity . '</span>';
+                                    $content .= '</div>';
+                                    
+                                    if ($product && $product->category) {
+                                        $content .= '<p class="text-sm text-green-700 mb-2"><strong>Category:</strong> ' . $product->category->name . '</p>';
+                                    }
+                                    
+                                    // Detail per entry
+                                    $content .= '<div class="text-sm text-green-600">';
+                                    $content .= '<strong>Usage Details:</strong>';
+                                    $content .= '<ul class="list-disc list-inside mt-1 ml-2">';
+                                    
+                                    foreach ($items as $item) {
+                                        $content .= '<li>Quantity: ' . $item->quantity;
+                                        if ($item->price) {
+                                            $content .= ' | Price: Rp ' . number_format($item->price, 0, ',', '.');
+                                        }
+                                        if ($item->created_at) {
+                                            $content .= ' | Added: ' . $item->created_at->format('d M Y');
+                                        }
+                                        $content .= '</li>';
+                                    }
+                                    
+                                    $content .= '</ul>';
+                                    $content .= '</div>';
+                                    $content .= '</div>';
+                                }
+                            } else {
+                                $content .= '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">';
+                                $content .= '<p class="text-gray-600">This vendor is not used in any products.</p>';
+                                $content .= '</div>';
+                            }
+                            
+                            $content .= '</div>';
+                            
+                            return new \Illuminate\Support\HtmlString($content);
+                        })
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Close'),
+                    Tables\Actions\Action::make('view_expenses')
+                        ->label('View Expenses')
+                        ->icon('heroicon-o-banknotes')
+                        ->color('warning')
+                        ->modalHeading(fn (Vendor $record) => 'Expenses for: ' . $record->name)
+                        ->modalDescription('Detailed list of all expenses related to this vendor')
+                        ->visible(fn (Vendor $record) => $record->vendors()->count() > 0)
+                        ->modalContent(function (Vendor $record) {
+                            $expenses = $record->vendors()
+                                ->orderBy('created_at', 'desc')
+                                ->get();
+                            
+                            $content = '<div class="space-y-4">';
+                            
+                            if ($expenses->count() > 0) {
+                                $totalAmount = $expenses->sum('amount');
+                                
+                                $content .= '<div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-yellow-800 mb-4">Expenses List (' . $expenses->count() . ' transactions)</h3>';
+                                $content .= '<p class="text-yellow-700 mb-4"><strong>Total Amount:</strong> Rp ' . number_format($totalAmount, 0, ',', '.') . '</p>';
+                                
+                                foreach ($expenses as $expense) {
+                                    $content .= '<div class="mb-3 p-3 bg-white border border-yellow-300 rounded-lg">';
+                                    $content .= '<div class="flex justify-between items-start mb-2">';
+                                    $content .= '<h4 class="font-medium text-yellow-900">' . ($expense->description ?? 'No Description') . '</h4>';
+                                    $content .= '<span class="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded">Rp ' . number_format($expense->amount, 0, ',', '.') . '</span>';
+                                    $content .= '</div>';
+                                    
+                                    $content .= '<div class="text-sm text-yellow-600 space-y-1">';
+                                    if ($expense->transaction_date) {
+                                        $content .= '<p><strong>Date:</strong> ' . \Carbon\Carbon::parse($expense->transaction_date)->format('d M Y') . '</p>';
+                                    }
+                                    if ($expense->category_uang_keluar) {
+                                        $content .= '<p><strong>Category:</strong> ' . ucfirst(str_replace('_', ' ', $expense->category_uang_keluar)) . '</p>';
+                                    }
+                                    if ($expense->created_at) {
+                                        $content .= '<p><strong>Recorded:</strong> ' . $expense->created_at->format('d M Y H:i') . '</p>';
+                                    }
+                                    $content .= '</div>';
+                                    $content .= '</div>';
+                                }
+                            } else {
+                                $content .= '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">';
+                                $content .= '<p class="text-gray-600">This vendor has no related expenses.</p>';
+                                $content .= '</div>';
+                            }
+                            
+                            $content .= '</div>';
+                            
+                            return new \Illuminate\Support\HtmlString($content);
+                        })
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Close'),
+                    Tables\Actions\Action::make('view_nota_dinas')
+                        ->label('View Nota Dinas')
+                        ->icon('heroicon-o-document-text')
+                        ->color('info')
+                        ->modalHeading(fn (Vendor $record) => 'Nota Dinas for: ' . $record->name)
+                        ->modalDescription('Detailed list of all nota dinas details related to this vendor')
+                        ->visible(fn (Vendor $record) => $record->notaDinasDetails()->count() > 0)
+                        ->modalContent(function (Vendor $record) {
+                            $notaDinasDetails = $record->notaDinasDetails()
+                                ->with('notaDinas')
+                                ->orderBy('created_at', 'desc')
+                                ->get();
+                            
+                            $content = '<div class="space-y-4">';
+                            
+                            if ($notaDinasDetails->count() > 0) {
+                                $totalAmount = $notaDinasDetails->sum('jumlah_transfer');
+                                
+                                $content .= '<div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-blue-800 mb-4">Nota Dinas Details (' . $notaDinasDetails->count() . ' entries)</h3>';
+                                $content .= '<p class="text-blue-700 mb-4"><strong>Total Transfer Amount:</strong> Rp ' . number_format($totalAmount, 0, ',', '.') . '</p>';
+                                
+                                foreach ($notaDinasDetails as $detail) {
+                                    $content .= '<div class="mb-3 p-3 bg-white border border-blue-300 rounded-lg">';
+                                    $content .= '<div class="flex justify-between items-start mb-2">';
+                                    $content .= '<h4 class="font-medium text-blue-900">' . ($detail->keperluan ?? 'No Description') . '</h4>';
+                                    $content .= '<span class="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded">Rp ' . number_format($detail->jumlah_transfer, 0, ',', '.') . '</span>';
+                                    $content .= '</div>';
+                                    
+                                    $content .= '<div class="text-sm text-blue-600 space-y-1">';
+                                    if ($detail->event) {
+                                        $content .= '<p><strong>Event:</strong> ' . $detail->event . '</p>';
+                                    }
+                                    if ($detail->invoice_number) {
+                                        $content .= '<p><strong>Invoice:</strong> ' . $detail->invoice_number . '</p>';
+                                    }
+                                    if ($detail->status_invoice) {
+                                        $statusLabel = ucfirst(str_replace('_', ' ', $detail->status_invoice));
+                                        $statusColor = match($detail->status_invoice) {
+                                            'sudah_dibayar' => 'text-green-600',
+                                            'menunggu' => 'text-yellow-600',
+                                            'belum_dibayar' => 'text-red-600',
+                                            default => 'text-blue-600'
+                                        };
+                                        $content .= '<p><strong>Status:</strong> <span class="' . $statusColor . '">' . $statusLabel . '</span></p>';
+                                    }
+                                    if ($detail->payment_stage) {
+                                        $content .= '<p><strong>Payment Stage:</strong> ' . ucfirst(str_replace('_', ' ', $detail->payment_stage)) . '</p>';
+                                    }
+                                    if ($detail->jenis_pengeluaran) {
+                                        $content .= '<p><strong>Type:</strong> ' . ucfirst(str_replace('_', ' ', $detail->jenis_pengeluaran)) . '</p>';
+                                    }
+                                    if ($detail->created_at) {
+                                        $content .= '<p><strong>Created:</strong> ' . $detail->created_at->format('d M Y H:i') . '</p>';
+                                    }
+                                    $content .= '</div>';
+                                    $content .= '</div>';
+                                }
+                            } else {
+                                $content .= '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">';
+                                $content .= '<p class="text-gray-600">This vendor has no related nota dinas details.</p>';
+                                $content .= '</div>';
+                            }
+                            
+                            $content .= '</div>';
+                            
+                            return new \Illuminate\Support\HtmlString($content);
+                        })
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Close'),
                     Tables\Actions\Action::make('duplicate')
                         ->label('Duplicate')
                         ->icon('heroicon-o-document-duplicate')
@@ -391,7 +896,82 @@ class VendorResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->requiresConfirmation(),
+                        ->icon('heroicon-m-trash')
+                        ->requiresConfirmation()
+                        ->modalHeading('Delete Selected Vendors')
+                        ->modalDescription('Are you sure you want to delete the selected vendors? This action cannot be undone.')
+                        ->modalSubmitActionLabel('Yes, delete selected')
+                        ->action(function (Collection $records) {
+                            $deletedCount = 0;
+                            $protectedVendors = [];
+                            $errorVendors = [];
+                            
+                            foreach ($records as $vendor) {
+                                try {
+                                    // Check if vendor can be deleted
+                                    $productCount = $vendor->productVendors()->count();
+                                    $expenseCount = $vendor->vendors()->count();
+                                    $notaDinasCount = $vendor->notaDinasDetails()->count();
+                                    
+                                    if ($productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0) {
+                                        $details = [];
+                                        if ($productCount > 0) {
+                                            $details[] = "{$productCount} product(s)";
+                                        }
+                                        if ($expenseCount > 0) {
+                                            $details[] = "{$expenseCount} expense(s)";
+                                        }
+                                        if ($notaDinasCount > 0) {
+                                            $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                                        }
+                                        $protectedVendors[] = "• {$vendor->name}: " . implode(', ', $details);
+                                        continue;
+                                    }
+                                    
+                                    // Attempt to delete
+                                    $vendor->delete();
+                                    $deletedCount++;
+                                    
+                                } catch (\Exception $e) {
+                                    $errorVendors[] = "{$vendor->name}: {$e->getMessage()}";
+                                }
+                            }
+                            
+                            // Show results
+                            if ($deletedCount > 0) {
+                                Notification::make()
+                                    ->success()
+                                    ->title('Vendors Deleted')
+                                    ->body("{$deletedCount} vendor(s) have been successfully deleted.")
+                                    ->send();
+                            }
+                            
+                            if (!empty($protectedVendors)) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Some Vendors Could Not Be Deleted')
+                                    ->body("The following vendors cannot be deleted because they are being used:\n\n" . implode("\n", $protectedVendors) . "\n\nPlease remove these associations first.")
+                                    ->persistent()
+                                    ->send();
+                            }
+                            
+                            if (!empty($errorVendors)) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Deletion Errors')
+                                    ->body("Errors occurred while deleting some vendors:\n\n" . implode("\n", $errorVendors))
+                                    ->persistent()
+                                    ->send();
+                            }
+                            
+                            if ($deletedCount === 0 && empty($protectedVendors) && empty($errorVendors)) {
+                                Notification::make()
+                                    ->info()
+                                    ->title('No Action Taken')
+                                    ->body('No valid data found for deletion.')
+                                    ->send();
+                            }
+                        }),
                     Tables\Actions\ForceDeleteBulkAction::make()
                         ->requiresConfirmation(),
                     Tables\Actions\RestoreBulkAction::make(),
@@ -432,6 +1012,20 @@ class VendorResource extends Resource
                                                 
                                                 Infolists\Components\TextEntry::make('category.name')
                                                     ->label('Category'),
+
+                                                Infolists\Components\TextEntry::make('status')
+                                                    ->label('Status')
+                                                    ->badge()
+                                                    ->color(fn (string $state): string => match ($state) {
+                                                        'vendor' => 'primary',
+                                                        'product' => 'success',
+                                                        default => 'gray',
+                                                    })
+                                                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                                                        'vendor' => 'Vendor',
+                                                        'product' => 'Product',
+                                                        default => ucfirst($state),
+                                                    }),
 
                                                 Infolists\Components\TextEntry::make('pic_name')
                                                     ->label('PIC Name'),
@@ -525,6 +1119,94 @@ class VendorResource extends Resource
                                             ]),
                                     ]),
                             ]),
+
+                        Infolists\Components\Tabs\Tab::make('Usage Information')
+                            ->icon('heroicon-m-chart-bar')
+                            ->schema([
+                                Infolists\Components\Section::make('Vendor Usage Overview')
+                                    ->schema([
+                                        Infolists\Components\Grid::make(3)
+                                            ->schema([
+                                                Infolists\Components\TextEntry::make('products_count')
+                                                    ->label('Used in Products')
+                                                    ->state(function (Vendor $record): int {
+                                                        return $record->productVendors()->count();
+                                                    })
+                                                    ->badge()
+                                                    ->color(fn (int $state): string => $state > 0 ? 'warning' : 'success')
+                                                    ->suffix(' items'),
+
+                                                Infolists\Components\TextEntry::make('expenses_count')
+                                                    ->label('Related Expenses')
+                                                    ->state(function (Vendor $record): int {
+                                                        return $record->vendors()->count();
+                                                    })
+                                                    ->badge()
+                                                    ->color(fn (int $state): string => $state > 0 ? 'info' : 'gray')
+                                                    ->suffix(' transactions'),
+
+                                                Infolists\Components\TextEntry::make('deletion_status')
+                                                    ->label('Deletion Status')
+                                                    ->state(function (Vendor $record): string {
+                                                        $productCount = $record->productVendors()->count();
+                                                        $expenseCount = $record->vendors()->count();
+                                                        
+                                                        if ($productCount > 0 || $expenseCount > 0) {
+                                                            return 'Protected';
+                                                        }
+                                                        return 'Can be deleted';
+                                                    })
+                                                    ->badge()
+                                                    ->color(function (Vendor $record): string {
+                                                        $productCount = $record->productVendors()->count();
+                                                        $expenseCount = $record->vendors()->count();
+                                                        
+                                                        if ($productCount > 0 || $expenseCount > 0) {
+                                                            return 'danger';
+                                                        }
+                                                        return 'success';
+                                                    }),
+                                            ]),
+                                    ]),
+
+                                Infolists\Components\Section::make('Usage Details')
+                                    ->schema([
+                                        Infolists\Components\TextEntry::make('usage_details')
+                                            ->label('Detailed Usage Information')
+                                            ->state(function (Vendor $record): string {
+                                                $productCount = $record->productVendors()->count();
+                                                $expenseCount = $record->vendors()->count();
+                                                
+                                                $details = [];
+                                                
+                                                if ($productCount > 0) {
+                                                    $productNames = $record->productVendors()
+                                                        ->with('product')
+                                                        ->get()
+                                                        ->pluck('product.name')
+                                                        ->unique()
+                                                        ->take(5);
+                                                    
+                                                    $details[] = "Products ({$productCount} total): " . $productNames->implode(', ') . 
+                                                        ($productCount > 5 ? ' and ' . ($productCount - 5) . ' more...' : '');
+                                                }
+                                                
+                                                if ($expenseCount > 0) {
+                                                    $details[] = "Expenses: {$expenseCount} transaction(s)";
+                                                }
+                                                
+                                                if (empty($details)) {
+                                                    return 'This vendor is not currently used in any products or expenses and can be safely deleted.';
+                                                }
+                                                
+                                                return implode("\n\n", $details) . 
+                                                    "\n\nNote: This vendor cannot be deleted while these associations exist.";
+                                            })
+                                            ->markdown()
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->collapsible(),
+                            ]),
                     ])
                     ->columnSpanFull(),
             ]);
@@ -570,6 +1252,7 @@ class VendorResource extends Resource
             'bank_account',
             'account_holder',
             'address',
+            'status',
             'category.name',
         ];
     }
