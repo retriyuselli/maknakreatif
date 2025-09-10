@@ -93,6 +93,15 @@ class LeaveTypeResource extends Resource
                     ->label('Keterangan')
                     ->sortable()
                     ->color('info'),
+                Tables\Columns\TextColumn::make('deleted_at')
+                    ->label('Dihapus')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->placeholder('Aktif')
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'danger' : 'success')
+                    ->formatStateUsing(fn ($state) => $state ? 'Dihapus' : 'Aktif'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d/m/Y H:i')
@@ -105,6 +114,11 @@ class LeaveTypeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TrashedFilter::make()
+                    ->label('Filter Status')
+                    ->placeholder('Semua Data')
+                    ->trueLabel('Hanya yang Dihapus')
+                    ->falseLabel('Tanpa yang Dihapus'),
                 Tables\Filters\Filter::make('max_days_range')
                     ->label('Range Maksimal Hari')
                     ->form([
@@ -131,22 +145,48 @@ class LeaveTypeResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\RestoreAction::make()
+                    ->successNotificationTitle('Jenis cuti berhasil dipulihkan'),
                 Tables\Actions\DeleteAction::make()
                     ->requiresConfirmation()
                     ->modalHeading('Hapus Jenis Cuti')
-                    ->modalDescription('Apakah Anda yakin ingin menghapus jenis cuti ini? Data yang terkait akan terpengaruh.')
-                    ->modalSubmitActionLabel('Ya, Hapus'),
+                    ->modalDescription('Apakah Anda yakin ingin menghapus jenis cuti ini? Data akan dipindahkan ke trash dan dapat dipulihkan.')
+                    ->modalSubmitActionLabel('Ya, Hapus')
+                    ->successNotificationTitle('Jenis cuti berhasil dihapus'),
+                Tables\Actions\ForceDeleteAction::make()
+                    ->requiresConfirmation()
+                    ->modalHeading('Hapus Permanen Jenis Cuti')
+                    ->modalDescription('Apakah Anda yakin ingin menghapus permanen jenis cuti ini? Data tidak dapat dipulihkan!')
+                    ->modalSubmitActionLabel('Ya, Hapus Permanen')
+                    ->successNotificationTitle('Jenis cuti berhasil dihapus permanen'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\RestoreBulkAction::make()
+                        ->successNotificationTitle('Jenis cuti terpilih berhasil dipulihkan'),
                     Tables\Actions\DeleteBulkAction::make()
                         ->requiresConfirmation()
                         ->modalHeading('Hapus Jenis Cuti Terpilih')
-                        ->modalDescription('Apakah Anda yakin ingin menghapus jenis cuti yang dipilih? Data yang terkait akan terpengaruh.')
-                        ->modalSubmitActionLabel('Ya, Hapus Semua'),
+                        ->modalDescription('Apakah Anda yakin ingin menghapus jenis cuti yang dipilih? Data akan dipindahkan ke trash dan dapat dipulihkan.')
+                        ->modalSubmitActionLabel('Ya, Hapus Semua')
+                        ->successNotificationTitle('Jenis cuti terpilih berhasil dihapus'),
+                    Tables\Actions\ForceDeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->modalHeading('Hapus Permanen Jenis Cuti Terpilih')
+                        ->modalDescription('Apakah Anda yakin ingin menghapus permanen jenis cuti yang dipilih? Data tidak dapat dipulihkan!')
+                        ->modalSubmitActionLabel('Ya, Hapus Permanen Semua')
+                        ->successNotificationTitle('Jenis cuti terpilih berhasil dihapus permanen'),
                 ]),
             ])
             ->defaultSort('name', 'asc');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 
     public static function getRelations(): array
