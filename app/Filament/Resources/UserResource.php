@@ -18,6 +18,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
@@ -227,11 +228,25 @@ class UserResource extends Resource
                                 Forms\Components\FileUpload::make('avatar_url')
                                     ->label('Foto Profil')
                                     ->image()
+                                    ->disk('public') // Ensure using public disk
                                     ->directory('avatars')
+                                    ->visibility('public') // Make sure files are public
                                     ->imageEditor()
+                                    ->imageCropAspectRatio('1:1') // Force square crop
+                                    ->imageResizeTargetWidth('300')
+                                    ->imageResizeTargetHeight('300')
                                     ->circleCropper()
                                     ->maxSize(2048) // 2MB
-                                    ->helperText('Upload foto profil (maksimal 2MB)'),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                    ->helperText('Upload foto profil (maksimal 2MB, format: JPG, PNG, WebP)')
+                                    ->columnSpan(1)
+                                    ->imagePreviewHeight('150')
+                                    ->uploadingMessage('Mengupload foto...')
+                                    ->removeUploadedFileButtonPosition('right')
+                                    ->uploadButtonPosition('left')
+                                    ->extraAttributes([
+                                        'class' => 'avatar-upload-field'
+                                    ]),
                                 
                                 Forms\Components\Select::make('status')
                                     ->label('Status Akun')
@@ -280,6 +295,7 @@ class UserResource extends Resource
                 
                 Tables\Columns\ImageColumn::make('avatar_url')
                     ->label('Foto Profil')
+                    ->disk('public') // Specify the disk explicitly
                     ->defaultImageUrl(function ($record) {
                         // Generate default avatar based on user's name initials
                         $name = $record->name ?? 'User';
@@ -289,10 +305,24 @@ class UserResource extends Resource
                             ->implode('');
                         
                         // Use UI Avatars service to generate default avatar
-                        return "https://ui-avatars.com/api/?name={$initials}&background=3b82f6&color=ffffff&size=128";
+                        return "https://ui-avatars.com/api/?name={$initials}&background=3b82f6&color=ffffff&size=128&font-size=0.33";
+                    })
+                    ->getStateUsing(function ($record) {
+                        // Debug: Check if avatar_url exists and return proper URL
+                        if ($record->avatar_url) {
+                            return $record->avatar_url; // Let Filament handle the URL generation
+                        }
+                        return null;
                     })
                     ->circular()
-                    ->size(40),
+                    ->size(40)
+                    ->extraImgAttributes(['loading' => 'lazy'])
+                    ->tooltip(function ($record) {
+                        if ($record->avatar_url) {
+                            return 'Klik untuk melihat foto profil';
+                        }
+                        return 'Foto profil default berdasarkan inisial nama';
+                    }),
                 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama')

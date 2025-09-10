@@ -13,6 +13,9 @@ class Payroll extends Model
         'user_id',
         'period_month',
         'period_year',
+        'gaji_pokok',
+        'tunjangan',
+        'pengurangan',
         'monthly_salary',
         'annual_salary',
         'bonus',
@@ -24,6 +27,9 @@ class Payroll extends Model
     protected $casts = [
         'period_month' => 'integer',
         'period_year' => 'integer',
+        'gaji_pokok' => 'decimal:2',
+        'tunjangan' => 'decimal:2',
+        'pengurangan' => 'decimal:2',
         'monthly_salary' => 'decimal:2',
         'annual_salary' => 'decimal:2',
         'bonus' => 'decimal:2',
@@ -44,6 +50,15 @@ class Payroll extends Model
                 $payroll->period_year = now()->year;
             }
             
+            // Otomatis hitung monthly_salary dari (gaji_pokok + tunjangan + bonus) - pengurangan
+            if ($payroll->gaji_pokok !== null || $payroll->tunjangan !== null || $payroll->bonus !== null || $payroll->pengurangan !== null) {
+                $gajiPokok = $payroll->gaji_pokok ?? 0;
+                $tunjangan = $payroll->tunjangan ?? 0;
+                $bonus = $payroll->bonus ?? 0;
+                $pengurangan = $payroll->pengurangan ?? 0;
+                $payroll->monthly_salary = $gajiPokok + $tunjangan + $bonus - $pengurangan;
+            }
+            
             // Otomatis hitung annual_salary setiap kali monthly_salary berubah
             if ($payroll->monthly_salary) {
                 $payroll->annual_salary = $payroll->monthly_salary * 12;
@@ -57,10 +72,10 @@ class Payroll extends Model
         return (float) ($this->monthly_salary ?? 0) * 12;
     }
 
-    // Accessor untuk mendapatkan total kompensasi
+    // Accessor untuk mendapatkan total kompensasi (bonus sudah termasuk dalam monthly_salary)
     public function getTotalCompensationAttribute(): float
     {
-        return $this->calculated_annual_salary + (float) ($this->bonus ?? 0);
+        return $this->calculated_annual_salary; // Bonus sudah termasuk dalam monthly_salary
     }
 
     // Accessor untuk periode yang mudah dibaca

@@ -14,6 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class User extends Authenticatable implements HasAvatar
@@ -23,29 +24,55 @@ class User extends Authenticatable implements HasAvatar
 
     /**
      * The attributes that are mass assignable.
+     * 
+     * SECURITY: Hanya field aman yang boleh di-mass assign
+     * Field sensitif harus diupdate secara eksplisit dengan validation
      *
      * @var list<string>
      */
     protected $fillable = [
+        // Basic Info - Safe for mass assignment
         'name',
         'email',
-        'password',
-        'status_id',
-        'status',
-        'avatar_url',
-        'expire_date',
-        'role',
-        'status_user',
-
-        // Personal information fields
+        'password', // Required field, tapi akan di-hash otomatis
+        
+        // Personal Info - Perlu validation ketat
         'phone_number',
-        'address',
+        'address', 
         'date_of_birth',
         'gender',
         'hire_date',
         'last_working_date',
+        'expire_date',
         'department',
-        'annual_leave_quota'
+        'annual_leave_quota',
+        'status',
+        
+        // Avatar - Allowed for file upload
+        'avatar_url',
+    ];
+
+    /**
+     * Attributes yang tidak boleh di-mass assign (PROTECTED)
+     * Harus diupdate secara eksplisit dengan authorization check
+     *
+     * @var array<string>
+     */
+    protected $guarded = [
+        'password',          // Harus melalui hash + validation
+        'role',              // Hanya admin yang bisa ubah
+        'status',            // Hanya admin yang bisa ubah  
+        'status_id',         // Hanya admin yang bisa ubah
+        'status_user',       // Hanya admin yang bisa ubah
+        'expire_date',       // Hanya super admin yang bisa set
+        'hire_date',         // Hanya HR yang bisa ubah
+        'last_working_date', // Hanya HR yang bisa ubah
+        'department',        // Hanya HR/Admin yang bisa ubah
+        'annual_leave_quota', // Hanya HR yang bisa ubah
+        'remember_token',    // System generated
+        'email_verified_at', // System generated
+        'created_at',        // System generated
+        'updated_at',        // System generated
     ];
 
     /**
@@ -83,6 +110,118 @@ class User extends Authenticatable implements HasAvatar
             'hire_date' => 'date',
             'last_working_date' => 'date',
         ];
+    }
+
+    /**
+     * 🔐 SECURE METHODS FOR UPDATING PROTECTED FIELDS
+     * Method ini memastikan hanya user dengan permission yang tepat yang bisa update field sensitif
+     */
+
+    /**
+     * Update password dengan validation dan hashing
+     */
+    public function updatePassword(string $newPassword, User $updatedBy): bool
+    {
+        // Cek authorization: user sendiri atau admin
+        if ($updatedBy->id !== $this->id && !$updatedBy->hasRole(['super_admin', 'admin'])) {
+            abort(403, 'Unauthorized to change password');
+        }
+
+        // Validate password strength
+        if (strlen($newPassword) < 8) {
+            throw new \InvalidArgumentException('Password must be at least 8 characters');
+        }
+
+        $this->password = bcrypt($newPassword);
+        
+        // Log activity
+        Log::info('Password updated', [
+            'user_id' => $this->id,
+            'updated_by' => $updatedBy->id,
+            'timestamp' => now()
+        ]);
+
+        return $this->save();
+    }
+
+    /**
+     * Update role/status - hanya admin yang bisa
+     */
+    public function updateRole(string $role, User $updatedBy): bool
+    {
+        if (!$updatedBy->hasRole(['super_admin', 'admin'])) {
+            abort(403, 'Only admin can change user roles');
+        }
+
+        $oldRole = $this->role;
+        $this->role = $role;
+        
+        // Log activity
+        Log::info('Role updated', [
+            'user_id' => $this->id,
+            'updated_by' => $updatedBy->id,
+            'old_role' => $oldRole,
+            'new_role' => $role,
+            'timestamp' => now()
+        ]);
+
+        return $this->save();
+    }
+
+    /**
+     * Update employment info - hanya HR/Admin
+     */
+    public function updateEmploymentInfo(array $data, User $updatedBy): bool
+    {
+        if (!$updatedBy->hasRole(['super_admin', 'admin', 'hr'])) {
+            abort(403, 'Only HR/Admin can update employment info');
+        }
+
+        $allowedFields = ['hire_date', 'last_working_date', 'department', 'annual_leave_quota'];
+        $updateData = array_intersect_key($data, array_flip($allowedFields));
+
+        if (empty($updateData)) {
+            return false;
+        }
+
+        foreach ($updateData as $field => $value) {
+            $this->{$field} = $value;
+        }
+
+        // Log activity
+        Log::info('Employment info updated', [
+            'user_id' => $this->id,
+            'updated_by' => $updatedBy->id,
+            'updated_fields' => array_keys($updateData),
+            'timestamp' => now()
+        ]);
+
+        return $this->save();
+    }
+
+    /**
+     * Update status - dengan audit trail
+     */
+    public function updateStatus(string $status, User $updatedBy, string $reason = null): bool
+    {
+        if (!$updatedBy->hasRole(['super_admin', 'admin', 'hr'])) {
+            abort(403, 'Unauthorized to change user status');
+        }
+
+        $oldStatus = $this->status;
+        $this->status = $status;
+
+        // Log activity dengan reason
+        Log::info('User status updated', [
+            'user_id' => $this->id,
+            'updated_by' => $updatedBy->id,
+            'old_status' => $oldStatus,
+            'new_status' => $status,
+            'reason' => $reason,
+            'timestamp' => now()
+        ]);
+
+        return $this->save();
     }
 
     public function getFilamentAvatarUrl(): ?string

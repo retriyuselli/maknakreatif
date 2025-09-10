@@ -37,30 +37,30 @@
 	============================== -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
         }
         
         body {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
         }
         
         h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
             font-weight: 600;
         }
         
         .big-title {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
             font-weight: 800;
         }
         
         th, td {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
         }
         
         th {
@@ -69,22 +69,22 @@
         }
         
         .table-title {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
             font-weight: 700;
         }
         
         address {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
             font-weight: 400;
         }
         
         .invoice-note {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
             font-weight: 400;
         }
         
         .company-address {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
             font-weight: 400;
         }
         
@@ -116,7 +116,7 @@
         /* Print/PDF-specific rules */
         @media print {
             * {
-                font-family: 'Poppins', sans-serif !important;
+                font-family: 'Noto Sans', sans-serif !important;
                 font-size: 10px !important;
                 -webkit-print-color-adjust: exact !important;
                 color-adjust: exact !important;
@@ -352,11 +352,11 @@ Invoice Area
                             <tbody>
                                 <tr>
                                     <td>Gaji Pokok</td>
-                                    <td class="text-end" colspan="2">Rp {{ number_format($record->monthly_salary, 0, ',', '.') }}</td>
+                                    <td class="text-end" colspan="2">Rp {{ number_format($record->gaji_pokok ?? 0, 0, ',', '.') }}</td>
                                 </tr>
                                 <tr>
                                     <td>Tunjangan Jabatan</td>
-                                    <td class="text-end" colspan="2">Rp {{ number_format($record->annual_salary, 0, ',', '.') }}</td>
+                                    <td class="text-end" colspan="2">Rp {{ number_format($record->tunjangan ?? 0, 0, ',', '.') }}</td>
                                 </tr>
                                 @if($record->bonus && $record->bonus > 0)
                                 <tr>
@@ -364,17 +364,41 @@ Invoice Area
                                     <td class="text-end" colspan="2">Rp {{ number_format($record->bonus, 0, ',', '.') }}</td>
                                 </tr>
                                 @endif
+                                @if($record->pengurangan && $record->pengurangan > 0)
                                 <tr>
-                                    <td>Pengurangan</td>
-                                    <td class="text-end" colspan="2">Rp {{ number_format($record->monthly_salary / 30, 0, ',', '.') }}</td>
+                                    <td>Pengurangan (BPJS & Lainnya)</td>
+                                    <td class="text-end" colspan="2">- Rp {{ number_format($record->pengurangan, 0, ',', '.') }}</td>
                                 </tr>
+                                @endif
+                                @php
+                                    // Total diterima sudah dihitung di monthly_salary (gaji_pokok + tunjangan - pengurangan)
+                                    $totalDiterima = $record->monthly_salary + ($record->bonus ?? 0);
+                                @endphp
                             </tbody>
                             <tfoot>
-                                <tr>
-                                    <td class="text-start" class="text-s" colspan="2"><b>Total Kompensasi</b></td>
-                                    <td><b>Rp {{ number_format($record->total_compensation, 0, ',', '.') }}</b></td>
+                                <tr style="background-color: #d4edda; font-weight: bold;">
+                                    <td class="text-start" colspan="2"><b>Total Diterima</b></td>
+                                    <td><b>Rp {{ number_format($record->monthly_salary, 0, ',', '.') }}</b></td>
                                 </tr>
                             </tfoot>
+                        </table>
+
+                        <p class="table-title mt-4"><b>Ringkasan Gaji Tahunan :</b></p>
+                        <table class="invoice-table table-style8">
+                            <tbody>
+                                <tr>
+                                    <th>Gaji Bulanan</th>
+                                    <td>Rp {{ number_format($record->monthly_salary, 0, ',', '.') }}</td>
+                                    <th>Gaji Tahunan</th>
+                                    <td>Rp {{ number_format($record->annual_salary, 0, ',', '.') }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Bonus Tahunan</th>
+                                    <td>Rp {{ number_format($record->bonus ?? 0, 0, ',', '.') }}</td>
+                                    <th>Total Kompensasi</th>
+                                    <td><strong>Rp {{ number_format($record->total_compensation, 0, ',', '.') }}</strong></td>
+                                </tr>
+                            </tbody>
                         </table>
 
                         <div class="row justify-content-between">
