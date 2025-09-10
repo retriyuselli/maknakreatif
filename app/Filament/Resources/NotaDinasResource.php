@@ -51,8 +51,9 @@ class NotaDinasResource extends Resource
                 Forms\Components\Select::make('pengirim_id')
                     ->label('Pengirim')
                     ->relationship('pengirim', 'name')
-                    ->searchable()
-                    ->preload()
+                    ->default(Auth::id())
+                    ->disabled()
+                    ->dehydrated()
                     ->required(),
                 Forms\Components\Select::make('penerima_id')
                     ->label('Penerima')
