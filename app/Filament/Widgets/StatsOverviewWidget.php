@@ -8,6 +8,7 @@ use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use App\Models\Prospect;
 use App\Models\User;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Carbon\Carbon;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -16,6 +17,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StatsOverviewWidget extends BaseWidget
 {
+    use HasWidgetShield;
+    
     protected static ?int $sort = 2;
     use InteractsWithPageFilters;
     

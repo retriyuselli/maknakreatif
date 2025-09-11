@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\Expense;
 use App\Models\Order;
 use App\Models\ExpenseOps;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ use Filament\Forms\Form;
 
 class ChartCombinedFinancialWidget extends ChartWidget
 {
+    use HasWidgetShield;
+    
     protected static ?string $heading = 'Combined Financial Overview';
 
     protected static ?int $sort = 4;

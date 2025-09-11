@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\Order;
 use Filament\Forms\Components\Select;
 use App\Models\User; // Meskipun tidak langsung di-query, baik untuk konteks
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class AccountManagerMonthlyRevenueChart extends ChartWidget
 {
+    use HasWidgetShield;
+    
     protected static ?int $sort = 4; // Sesuaikan urutan widget di dashboard Anda
 
     // protected static ?string $pollingInterval = '30s'; // Opsional: refresh data otomatis

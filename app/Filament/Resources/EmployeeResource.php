@@ -66,6 +66,8 @@ class EmployeeResource extends Resource
                                                 Forms\Components\FileUpload::make('photo')
                                                     ->label('Profile Photo')
                                                     ->image()
+                                                    ->openable()
+                                                    ->downloadable()
                                                     ->directory('employee-photos')
                                                     ->imageCropAspectRatio('1:1')
                                                     ->imageResizeMode('cover'),

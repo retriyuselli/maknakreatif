@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Order; // Tambahkan ini
 use App\Models\User;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Filament\Forms\Components\Select;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB; // Pastikan DB facade di-import
 
 class UserRolesChartWidget extends ChartWidget
 {
+    use HasWidgetShield;
+    
     protected static ?int $sort = 3; // Sesuaikan urutan widget di dashboard
 
     protected static ?string $pollingInterval = '30s'; // Opsional: refresh data setiap 30 detik

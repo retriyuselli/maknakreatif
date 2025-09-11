@@ -3,11 +3,14 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Prospect;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class ProspectStatsWidget extends BaseWidget
 {
+    use HasWidgetShield;
+    
     protected function getStats(): array
     {
         $totalProspects = Prospect::count();

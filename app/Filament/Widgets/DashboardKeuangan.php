@@ -5,11 +5,14 @@ namespace App\Filament\Widgets;
 use App\Models\Expense;
 use App\Models\ExpenseOps;
 use App\Models\DataPembayaran;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class DashboardKeuangan extends BaseWidget
 {
+    use HasWidgetShield;
+    
     protected static ?string $pollingInterval = '60s';
 
     protected function getStats(): array

@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Order;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class RevenueBulananWeddingWidget extends BaseWidget
 {
+    use HasWidgetShield;
+    
     protected static ?string $heading = 'Revenue Wedding per-Bulan';
     protected static ?int $sort = 11;
 

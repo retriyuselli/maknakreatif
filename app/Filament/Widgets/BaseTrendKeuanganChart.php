@@ -2,12 +2,15 @@
 
 namespace App\Filament\Widgets;
 
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Forms\Components\Select;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
 abstract class BaseTrendKeuanganChart extends ChartWidget
 {
+    use HasWidgetShield;
+    
     public ?int $tahun = null;
     protected int | string | array $columnSpan = 'full';
 

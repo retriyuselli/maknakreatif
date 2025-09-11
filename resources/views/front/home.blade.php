@@ -102,8 +102,8 @@
                             <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                                 <div class="flex items-center justify-between">
                                     <div class="text-white">
-                                        <h3 class="font-semibold text-gray-900">Dashboard Operasional</h3>
-                                        <p class="text-blue-400 text-sm">Real-time overview</p>
+                                        <h3 class="font-semibold text-white">Dashboard Operasional</h3>
+                                        <p class="text-white text-sm">Real-time overview</p>
                                     </div>
                                     <div class="flex space-x-1">
                                         <div class="w-3 h-3 bg-red-400 rounded-full"></div>

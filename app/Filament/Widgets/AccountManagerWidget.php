@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\User;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -16,6 +17,8 @@ use Illuminate\Contracts\View\View;
 
 class AccountManagerWidget extends BaseWidget
 {
+    use HasWidgetShield;
+    
     // Widget configuration for appearance and behavior
     protected static ?string $heading = 'Account Manager Performance Dashboard';
     protected static ?int $sort = 6;  // Controls widget position in the dashboard

@@ -6,6 +6,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use App\Models\Employee;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
@@ -17,6 +18,8 @@ use Illuminate\Support\Collection;
 
 class EventManager extends BaseWidget
 {
+    use HasWidgetShield;
+    
     protected static ?int $sort = 5;
     protected static ?string $heading = 'Event Manager Performance Dashboard';
     protected static ?int $contentHeight = 400;

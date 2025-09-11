@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\OrderResource;
 use App\Models\Order;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,6 +13,8 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class ComingSoonResepsiWidget extends BaseWidget
 {
+    use HasWidgetShield;
+    
     protected static ?string $heading = 'Coming Soon Resepsi';
 
     protected static ?int $sort = 8;
