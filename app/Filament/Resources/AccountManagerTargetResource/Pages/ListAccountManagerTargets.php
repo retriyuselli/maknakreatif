@@ -201,4 +201,9 @@ class ListAccountManagerTargets extends ListRecords
         }
     }
 
+    protected function getHeaderWidgets(): array
+    {
+        return AccountManagerTargetResource::getWidgets();
+    }
+
 }

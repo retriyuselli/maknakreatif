@@ -9,6 +9,7 @@ class LeaveBalance extends Model
     protected $fillable = [
         'user_id',
         'leave_type_id',
+        'year',
         'allocated_days',
         'used_days',
         'remaining_days',

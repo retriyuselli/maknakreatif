@@ -19,7 +19,7 @@ return new class extends Migration
             $table->text('note')->nullable(); //
             $table->date('date_expense'); //
             $table->decimal('amount', 15, 2); //
-            $table->string('no_nd')->nullable(); //
+            $table->text('no_nd')->nullable(); //
             $table->string('image')->nullable(); //
             $table->enum('kategori_transaksi', ['uang_masuk', 'uang_keluar'])->default('uang_keluar');
             $table->timestamps();

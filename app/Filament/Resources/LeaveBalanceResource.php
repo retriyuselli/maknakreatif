@@ -235,19 +235,36 @@ class LeaveBalanceResource extends Resource
                     ->modalSubmitActionLabel('Ya, Generate Otomatis'),
             ])
             ->actions([
-                Tables\Actions\Action::make('recalculate')
-                    ->label('Hitung Ulang')
-                    ->icon('heroicon-m-calculator')
-                    ->color('info')
-                    ->action(function (LeaveBalance $record) {
-                        $record->calculateUsedDays();
-                    })
-                    ->requiresConfirmation()
-                    ->modalHeading('Hitung Ulang Saldo Cuti')
-                    ->modalDescription('Menghitung ulang cuti terpakai berdasarkan pengajuan cuti yang disetujui tahun ini.')
-                    ->modalSubmitActionLabel('Ya, Hitung Ulang'),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('recalculate')
+                        ->label('Hitung Ulang')
+                        ->icon('heroicon-m-calculator')
+                        ->color('info')
+                        ->action(function (LeaveBalance $record) {
+                            $record->calculateUsedDays();
+                            
+                            Notification::make()
+                                ->title('Berhasil!')
+                                ->body('Saldo cuti telah dihitung ulang.')
+                                ->success()
+                                ->send();
+                        })
+                        ->requiresConfirmation()
+                        ->modalHeading('Hitung Ulang Saldo Cuti')
+                        ->modalDescription('Menghitung ulang cuti terpakai berdasarkan pengajuan cuti yang disetujui tahun ini.')
+                        ->modalSubmitActionLabel('Ya, Hitung Ulang'),
+                    Tables\Actions\EditAction::make()
+                        ->label('Edit')
+                        ->icon('heroicon-m-pencil-square'),
+                    Tables\Actions\DeleteAction::make()
+                        ->label('Hapus')
+                        ->icon('heroicon-m-trash'),
+                ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('sm')
+                ->color('gray')
+                ->button(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

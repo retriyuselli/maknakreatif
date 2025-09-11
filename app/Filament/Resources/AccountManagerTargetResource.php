@@ -519,6 +519,15 @@ class AccountManagerTargetResource extends Resource
         ];
     }
 
+    public static function getWidgets(): array
+    {
+        return [
+            AccountManagerTargetResource\Widgets\AmOverview::class,
+            AccountManagerTargetResource\Widgets\AmPerformanceChart::class,
+            AccountManagerTargetResource\Widgets\TopPerformersWidget::class,
+        ];
+    }
+
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
