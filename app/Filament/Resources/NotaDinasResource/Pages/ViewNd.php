@@ -63,18 +63,19 @@ class ViewNd extends Page
                 ->label('Download PDF')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('primary')
-                ->url(fn (): string => route('nota-dinas.download-pdf', ['notaDinas' => $this->notaDinas->id]))
+                ->url(fn (): string => route('nota-dinas.preview-web', ['notaDinas' => $this->notaDinas->id]))
+                // route('nota-dinas.preview-web', $notaDinas)
                 ->openUrlInNewTab(),
             
-            \Filament\Actions\Action::make('print')
-                ->label('Print')
-                ->icon('heroicon-o-printer')
-                ->color('gray')
-                ->action(fn () => $this->js('
-                    setTimeout(function() {
-                        window.print();
-                    }, 100);
-                ')),
+            // \Filament\Actions\Action::make('print')
+            //     ->label('Print')
+            //     ->icon('heroicon-o-printer')
+            //     ->color('gray')
+            //     ->action(fn () => $this->js('
+            //         setTimeout(function() {
+            //             window.print();
+            //         }, 100);
+            //     ')),
         ];
     }
 }

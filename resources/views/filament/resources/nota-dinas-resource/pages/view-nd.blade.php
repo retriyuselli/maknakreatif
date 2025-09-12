@@ -4,12 +4,12 @@
     <div class="bg-white shadow-sm border border-gray-200 rounded-xl p-4 sm:p-6 lg:p-8">
         <!-- Action Buttons -->
         <div class="flex gap-3 mb-6 justify-end">
-            <a href="{{ route('nota-dinas.preview-web', $notaDinas) }}" 
+            {{-- <a href="{{ route('nota-dinas.preview-web', $notaDinas) }}" 
                target="_blank"
                class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150"
                style="color: black;">
                 📱 Preview PDF
-            </a>
+            </a> --}}
             <a href="{{ route('nota-dinas.download-pdf', $notaDinas) }}" 
                class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150"
                style="color: black;">
@@ -151,7 +151,7 @@
                                     <div class="text-sm font-medium text-gray-900">{{ $firstDetail->bank_name }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-mono text-gray-900">{{ $firstDetail->bank_account }}</div>
+                                    <div class="text-sm text-gray-900">{{ $firstDetail->bank_account }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">{{ $firstDetail->account_holder }}</div>
@@ -174,44 +174,6 @@
                         </tr>
                     </tfoot>
                 </table>
-            </div>
-        </div>
-
-        <!-- Signature Section -->
-        <div class="border-t pt-8 mt-8">
-            <h3 class="font-semibold text-gray-800 text-lg mb-6">Persetujuan dan Tanda Tangan</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <!-- Admin -->
-                <div class="text-center">
-                    <p class="text-sm text-gray-600 mb-4">Admin</p>
-                    <div class="h-16 border-b border-gray-300 mb-2"></div>
-                    <p class="text-sm font-medium text-gray-800">{{ $notaDinas->pengirim->name ?? 'N/A' }}</p>
-                    <p class="text-xs text-gray-500">{{ $notaDinas->created_at->format('d/m/Y') }}</p>
-                </div>
-
-                <!-- Event Manager -->
-                <div class="text-center">
-                    <p class="text-sm text-gray-600 mb-4">Event Manager</p>
-                    <div class="h-16 border-b border-gray-300 mb-2"></div>
-                    <p class="text-sm font-medium text-gray-800">_________________</p>
-                    <p class="text-xs text-gray-500">Tanggal: ___________</p>
-                </div>
-
-                <!-- Finance -->
-                <div class="text-center">
-                    <p class="text-sm text-gray-600 mb-4">Finance</p>
-                    <div class="h-16 border-b border-gray-300 mb-2"></div>
-                    <p class="text-sm font-medium text-gray-800">{{ $notaDinas->penerima->name ?? 'Finance' }}</p>
-                    <p class="text-xs text-gray-500">Tanggal: ___________</p>
-                </div>
-
-                <!-- Pimpinan -->
-                <div class="text-center">
-                    <p class="text-sm text-gray-600 mb-4">Pimpinan</p>
-                    <div class="h-16 border-b border-gray-300 mb-2"></div>
-                    <p class="text-sm font-medium text-gray-800">{{ $notaDinas->approver->name ?? 'Belum Disetujui' }}</p>
-                    <p class="text-xs text-gray-500">{{ $notaDinas->approved_at ? $notaDinas->approved_at->format('d/m/Y') : 'Tanggal: ___________' }}</p>
-                </div>
             </div>
         </div>
     </div>

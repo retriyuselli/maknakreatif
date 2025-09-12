@@ -85,9 +85,7 @@ class PendapatanLainResource extends Resource
                                     ->downloadable()
                                     ->openable()
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->maxSize(5120) // 5MB
-                                    ->imageResizeMode('cover')
-                                    ->imageCropAspectRatio('16:9')
+                                    ->maxSize(1024) // 1MB
                                     ->columnSpanFull()
                                     ->helperText('Upload bukti pendapatan (JPEG, PNG, WEBP, max 5MB)'),
 
