@@ -341,6 +341,19 @@ Route::middleware(['auth'])->group(function () {
     })->name('admin.targets.generate-from-orders');
 });
 
+// Route untuk PDF Nota Dinas Approval
+Route::get('/nota-dinas/{notaDinas}/preview-web', [App\Http\Controllers\NotaDinasPdfController::class, 'previewWeb'])
+    ->name('nota-dinas.preview-web')
+    ->middleware('auth');
+
+Route::get('/nota-dinas/{notaDinas}/preview-pdf', [App\Http\Controllers\NotaDinasPdfController::class, 'previewPdf'])
+    ->name('nota-dinas.preview-pdf')
+    ->middleware('auth');
+
+Route::get('/nota-dinas/{notaDinas}/download-pdf', [App\Http\Controllers\NotaDinasPdfController::class, 'downloadPdf'])
+    ->name('nota-dinas.download-pdf')
+    ->middleware('auth');
+
 // FALLBACK ROUTE - Modified to exclude Livewire routes
 Route::fallback(function () {
     // Don't catch Livewire requests

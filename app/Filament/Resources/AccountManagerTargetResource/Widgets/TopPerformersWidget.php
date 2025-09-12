@@ -7,6 +7,9 @@ use App\Models\User;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\Select;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -14,29 +17,69 @@ use Carbon\Carbon;
 
 class TopPerformersWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Top Performers This Month';
-    
     protected static ?int $sort = 3;
     
     protected int | string | array $columnSpan = 'full';
 
+    public function getHeading(): string
+    {
+        return 'Top Performers';
+    }
+
     public function table(Table $table): Table
     {
-        $currentYear = now()->year;
-        $currentMonth = now()->month;
-
         return $table
             ->query(
                 AccountManagerTarget::query()
                     ->with(['user'])
-                    ->where('year', $currentYear)
-                    ->where('month', $currentMonth)
                     ->whereHas('user.roles', function ($query) {
                         $query->where('name', 'Account Manager');
                     })
+                    ->whereHas('user', function ($query) {
+                        $query->where('status', 'active');
+                    })
                     ->orderByDesc('achieved_amount')
-                    ->limit(10)
             )
+            ->filters([
+                SelectFilter::make('year')
+                    ->label('Tahun')
+                    ->options(function () {
+                        $years = AccountManagerTarget::selectRaw('DISTINCT year')
+                            ->orderBy('year', 'desc')
+                            ->pluck('year', 'year')
+                            ->toArray();
+                        return $years;
+                    })
+                    ->default(now()->year)
+                    ->query(function (Builder $query, array $data) {
+                        if (filled($data['value'])) {
+                            $query->where('year', $data['value']);
+                        }
+                    }),
+
+                SelectFilter::make('month')
+                    ->label('Bulan')
+                    ->options([
+                        1 => 'Januari',
+                        2 => 'Februari', 
+                        3 => 'Maret',
+                        4 => 'April',
+                        5 => 'Mei',
+                        6 => 'Juni',
+                        7 => 'Juli',
+                        8 => 'Agustus',
+                        9 => 'September',
+                        10 => 'Oktober',
+                        11 => 'November',
+                        12 => 'Desember',
+                    ])
+                    ->default(now()->month)
+                    ->query(function (Builder $query, array $data) {
+                        if (filled($data['value'])) {
+                            $query->where('month', $data['value']);
+                        }
+                    }),
+            ])
             ->columns([
                 TextColumn::make('rank')
                     ->label('#')
@@ -54,7 +97,6 @@ class TopPerformersWidget extends BaseWidget
 
                 TextColumn::make('user.name')
                     ->label('Account Manager')
-                    ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
@@ -102,6 +144,7 @@ class TopPerformersWidget extends BaseWidget
                     ->color(fn (float $state): string => $state <= 0 ? 'success' : 'warning'),
             ])
             ->defaultSort('achieved_amount', 'desc')
-            ->paginated(false);
+            ->paginated([10, 25, 50])
+            ->defaultPaginationPageOption(10);
     }
 }

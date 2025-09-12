@@ -239,6 +239,12 @@ class NotaDinasResource extends Resource
                             'status' => 'ditolak',
                         ]);
                     }),
+                Action::make('view_approval')
+                    ->label('Lihat Approval')
+                    ->icon('heroicon-o-document-text')
+                    ->color('info')
+                    ->url(fn (NotaDinas $record): string => static::getUrl('view-nd', ['record' => $record]))
+                    ->openUrlInNewTab(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
@@ -550,6 +556,7 @@ class NotaDinasResource extends Resource
             'index' => Pages\ListNotaDinas::route('/'),
             'create' => Pages\CreateNotaDinas::route('/create'),
             'edit' => Pages\EditNotaDinas::route('/{record}/edit'),
+            'view-nd' => Pages\ViewNd::route('/{record}/view-nd'),
         ];
     }
 }

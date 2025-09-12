@@ -20,20 +20,6 @@
         <div class="text-center mb-16">
             <h2 class="text-3xl font-bold text-gray-900 mb-4">Pilih Paket yang Tepat untuk Anda</h2>
             <p class="text-gray-600 text-lg">Dapatkan semua fitur yang Anda butuhkan untuk mengelola bisnis wedding organizer</p>
-            
-            <!-- Billing Toggle -->
-            <div class="mt-12 mb-8">
-                <div class="flex items-center justify-center space-x-4">
-                    <span class="text-gray-700 font-medium">Per Bulan</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="billing-toggle" class="sr-only">
-                        <div class="w-14 h-7 bg-blue-200 rounded-full relative transition-colors duration-200 ease-in-out">
-                            <div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-200 ease-in-out"></div>
-                        </div>
-                    </label>
-                    <span class="text-gray-700 font-medium">Per Tahun <span class="text-green-600 font-semibold">(Hemat Lebih Banyak!)</span></span>
-                </div>
-            </div>
         </div>
         
         <!-- 2-Column Pricing Cards -->
@@ -43,8 +29,8 @@
                 <div class="text-center mb-8">
                     <h3 class="text-2xl font-bold text-gray-800 mb-2">Non Hastana</h3>
                     <div class="mb-4">
-                        <span class="text-4xl font-bold text-blue-600" id="non-hastana-price">Rp 417.000</span>
-                        <span class="text-gray-500 text-lg" id="non-hastana-period">/bulan</span>
+                        <span class="text-4xl font-bold text-blue-600">Rp 299.000</span>
+                        <span class="text-gray-500 text-lg">/event</span>
                     </div>
                     <p class="text-gray-500">Untuk wedding organizer pemula</p>
                 </div>
@@ -111,8 +97,8 @@
                 <div class="text-center mb-8">
                     <h3 class="text-2xl font-bold text-purple-600 mb-2">Anggota Hastana</h3>
                     <div class="mb-4">
-                        <span class="text-4xl font-bold text-purple-600" id="hastana-price">Rp 354.000</span>
-                        <span class="text-gray-500 text-lg" id="hastana-period">/bulan</span>
+                        <span class="text-4xl font-bold text-purple-600">Rp 249.000</span>
+                        <span class="text-gray-500 text-lg">/event</span>
                     </div>
                     <p class="text-gray-500">Untuk member komunitas Hastana</p>
                 </div>
@@ -173,56 +159,5 @@
         </div>
     </div>
 </section>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggle = document.getElementById('billing-toggle');
-    const toggleContainer = toggle.nextElementSibling;
-    const toggleSwitch = toggleContainer.querySelector('div:last-child');
-    
-    toggle.addEventListener('change', function() {
-        const isYearly = this.checked;
-        
-        // Update toggle appearance
-        if (isYearly) {
-            toggleContainer.classList.add('bg-blue-600');
-            toggleContainer.classList.remove('bg-blue-200');
-            toggleSwitch.style.transform = 'translateX(28px)';
-        } else {
-            toggleContainer.classList.remove('bg-blue-600');
-            toggleContainer.classList.add('bg-blue-200');
-            toggleSwitch.style.transform = 'translateX(0)';
-        }
-        
-        // Update prices
-        updatePrices(isYearly);
-    });
-    
-    function updatePrices(isYearly) {
-        const prices = {
-            nonHastana: {
-                monthly: 'Rp 417.000',
-                yearly: 'Rp 5.000.000',
-                monthlyPeriod: '/bulan',
-                yearlyPeriod: '/tahun'
-            },
-            hastana: {
-                monthly: 'Rp 354.000',
-                yearly: 'Rp 4.250.000',
-                monthlyPeriod: '/bulan',
-                yearlyPeriod: '/tahun'
-            }
-        };
-        
-        // Update Non Hastana plan
-        document.getElementById('non-hastana-price').textContent = isYearly ? prices.nonHastana.yearly : prices.nonHastana.monthly;
-        document.getElementById('non-hastana-period').textContent = isYearly ? prices.nonHastana.yearlyPeriod : prices.nonHastana.monthlyPeriod;
-        
-        // Update Hastana plan
-        document.getElementById('hastana-price').textContent = isYearly ? prices.hastana.yearly : prices.hastana.monthly;
-        document.getElementById('hastana-period').textContent = isYearly ? prices.hastana.yearlyPeriod : prices.hastana.monthlyPeriod;
-    }
-});
-</script>
 
 @endsection
