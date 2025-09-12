@@ -7,6 +7,7 @@ use App\Models\NotaDinas;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Illuminate\Support\HtmlString;
 
 class EditNotaDinas extends EditRecord
 {
@@ -59,7 +60,7 @@ class EditNotaDinas extends EditRecord
                     return 'Nota Dinas Details - ' . $record->no_nd;
                 })
                 ->modalDescription('This Nota Dinas has related details and cannot be deleted.')
-                ->modalContent(function (): string {
+                ->modalContent(function (): HtmlString {
                     /** @var NotaDinas $record */
                     $record = $this->getRecord();
                     $details = $record->details()->with('vendor', 'order')->get();
@@ -86,7 +87,7 @@ class EditNotaDinas extends EditRecord
                     $content .= '</div>';
                     $content .= '</div>';
                     
-                    return $content;
+                    return new HtmlString($content);
                 })
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close'),

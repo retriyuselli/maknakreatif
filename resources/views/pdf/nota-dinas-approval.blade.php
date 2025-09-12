@@ -293,7 +293,7 @@
             <!-- Signature Section -->
             <div class="approval-section">
                 <h3>Persetujuan dan Tanda Tangan</h3>
-                <div class="approval-grid">
+                <div class="approval-grid" style="margin-top: 20px;">
                     <div class="approval-item">
                         <p><strong>Admin</strong></p>
                         <div class="signature-space"></div>

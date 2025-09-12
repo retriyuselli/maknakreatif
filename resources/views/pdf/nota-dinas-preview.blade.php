@@ -280,7 +280,7 @@
             <!-- Signature Section -->
             <div class="approval-section">
                 <h3 style="font-family: 'Noto Sans', sans-serif;">Persetujuan dan Tanda Tangan</h3>
-                <div class="approval-grid">
+                <div class="approval-grid" style="margin-top: 20px;">
                     <div class="approval-item">
                         <p style="font-family: 'Noto Sans', sans-serif;"><strong>Admin</strong></p>
                         <div class="signature-space"></div>

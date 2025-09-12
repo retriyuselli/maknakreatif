@@ -84,7 +84,7 @@
                                         </div>
                                     @endif
                                     @if ($detail->payment_stage)
-                                        <div class="text-xs text-blue-600 font-medium">Tahap: {{ $detail->payment_stage }}</div>
+                                        <div class="text-xs text-blue-600 font-medium">{{ $detail->payment_stage }}</div>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $detail->keperluan }}
