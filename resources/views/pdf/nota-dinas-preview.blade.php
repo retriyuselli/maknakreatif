@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preview PDF - Surat Persetujuan {{ $notaDinas->no_nd }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
@@ -122,11 +125,13 @@
             📥 Download PDF
         </a> --}}
         <button onclick="window.print()" 
-                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors">
+                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
+                style="font-family: 'Noto Sans', sans-serif;">
             🖨️ Print
         </button>
         <a href="{{ url()->previous() }}" 
-           class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors">
+           class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
+           style="font-family: 'Noto Sans', sans-serif;">
             ← Kembali
         </a>
     </div>
@@ -137,9 +142,9 @@
             <div class="header">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h1 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">SURAT PERSETUJUAN PEMBAYARAN</h1>
-                        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">No. ND: {{ $notaDinas->no_nd }}</h2>
-                        <p style="font-size: 11px; color: #666;">Tanggal: {{ $notaDinas->created_at->format('d F Y') }}</p>
+                        <h1 style="font-size: 18px; font-weight: bold; margin-bottom: 5px; font-family: 'Noto Sans', sans-serif;">SURAT PERSETUJUAN PEMBAYARAN</h1>
+                        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 5px; font-family: 'Noto Sans', sans-serif;">No. ND: {{ $notaDinas->no_nd }}</h2>
+                        <p style="font-size: 11px; color: #666; font-family: 'Noto Sans', sans-serif;">Tgl: {{ $notaDinas->created_at->format('d F Y') }}</p>
                     </div>
                     <div>
                         <img src="{{ asset('images/logomkiinv.png') }}" alt="Logo" style="height: 60px;">
@@ -150,56 +155,59 @@
             <!-- Company Info -->
             <div class="company-info">
                 <div class="company-left">
-                    <h3>Diajukan oleh:</h3>
-                    <p><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
-                    <p>Status: <strong>{{ ucfirst($notaDinas->status) }}</strong></p>
+                    <h3 style="font-family: 'Noto Sans', sans-serif;">Diajukan oleh:</h3>
+                    <p style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
+                    <p style="font-family: 'Noto Sans', sans-serif;">Status: <strong>{{ ucfirst($notaDinas->status) }}</strong></p>
                 </div>
-                <div class="company-right">
-                    <h3>Informasi Nota Dinas:</h3>
-                    <p><strong>Sifat:</strong> {{ $notaDinas->sifat }}</p>
-                    <p><strong>Hal:</strong> {{ $notaDinas->hal }}</p>
+                                <div class="company-right">
+                    <h3 style="font-family: 'Noto Sans', sans-serif;">Informasi Nota Dinas:</h3>
+                    <p style="font-family: 'Noto Sans', sans-serif;"><strong>Sifat:</strong> {{ $notaDinas->sifat }}</p>
+                    <p style="font-family: 'Noto Sans', sans-serif;"><strong>Hal:</strong> {{ $notaDinas->hal }}</p>
+                    @if($notaDinas->nd_upload)
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>File Lampiran:</strong> {{ basename($notaDinas->nd_upload) }}</p>
+                    @endif
                 </div>
             </div>
 
             <!-- Detail Pengeluaran -->
             <div class="section">
-                <h3>Detail Pengeluaran</h3>
-                <table>
+                <h3 style="font-family: 'Noto Sans', sans-serif;">Detail Pengeluaran</h3>
+                <table style="font-family: 'Noto Sans', sans-serif;">
                     <thead>
                         <tr>
-                            <th>Vendor</th>
-                            <th>Keperluan</th>
-                            <th>Event</th>
-                            <th>Invoice</th>
-                            <th class="text-right">Jumlah</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Vendor</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Keperluan</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Event</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Invoice</th>
+                            <th class="text-right" style="font-family: 'Noto Sans', sans-serif;">Jumlah</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($details as $detail)
                             <tr>
-                                <td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">
                                     <strong>{{ $detail->vendor->name ?? 'N/A' }}</strong>
                                     {{-- @if($detail->order && $detail->order->prospect)
                                         <br><small>{{ $detail->order->prospect->name ?? '' }}</small>
                                     @endif --}}
                                     @if($detail->payment_stage)
-                                        <br><small style="color: #1e40af; font-weight: bold;">Tahap: {{ $detail->payment_stage }}</small>
+                                        <br><small style="color: #1e40af; font-weight: bold; font-family: 'Noto Sans', sans-serif;">{{ $detail->payment_stage }}</small>
                                     @endif
                                 </td>
-                                <td>{{ $detail->keperluan }}</td>
-                                <td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">{{ $detail->keperluan }}</td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">
                                     {{ $detail->order && $detail->order->prospect ? $detail->order->prospect->name_event : ($detail->event ?? '-') }}
                                     @if($detail->jenis_pengeluaran)
-                                        <br><small style="color: #059669; font-weight: bold;">{{ ucfirst($detail->jenis_pengeluaran) }}</small>
+                                        <br><small style="color: #059669; font-weight: bold; font-family: 'Noto Sans', sans-serif;">{{ ucfirst($detail->jenis_pengeluaran) }}</small>
                                     @endif
                                 </td>
-                                <td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">
                                     {{ $detail->invoice_number ?? '-' }}
                                     @if($detail->status_invoice)
-                                        <br><small>({{ ucfirst($detail->status_invoice) }})</small>
+                                        <br><small style="font-family: 'Noto Sans', sans-serif;">({{ ucfirst($detail->status_invoice) }})</small>
                                     @endif
                                 </td>
-                                <td class="text-right font-bold">
+                                <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
                                     Rp {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}
                                 </td>
                             </tr>
@@ -207,8 +215,8 @@
                     </tbody>
                     <tfoot>
                         <tr style="background-color: #f8f9fa;">
-                            <td colspan="4" class="text-right font-bold">Total:</td>
-                            <td class="text-right font-bold">
+                            <td colspan="4" class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">Total:</td>
+                            <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
                                 Rp {{ number_format($totalJumlahTransfer, 0, ',', '.') }}
                             </td>
                         </tr>
@@ -218,15 +226,15 @@
 
             <!-- Detail Transfer Bank -->
             <div class="section">
-                <h3>Detail Transfer Bank</h3>
-                <table>
+                <h3 style="font-family: 'Noto Sans', sans-serif;">Detail Transfer Bank</h3>
+                <table style="font-family: 'Noto Sans', sans-serif;">
                     <thead>
                         <tr>
-                            <th>Bank</th>
-                            <th>No. Rekening</th>
-                            <th>Atas Nama</th>
-                            <th>Vendor</th>
-                            <th class="text-right">Jumlah Transfer</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Bank</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">No. Rekening</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Atas Nama</th>
+                            <th style="font-family: 'Noto Sans', sans-serif;">Vendor</th>
+                            <th class="text-right" style="font-family: 'Noto Sans', sans-serif;">Jumlah Transfer</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -240,16 +248,16 @@
                         @foreach($bankGroups as $bankGroup)
                             @php $firstDetail = $bankGroup->first(); @endphp
                             <tr>
-                                <td><strong>{{ $firstDetail->bank_name }}</strong></td>
-                                <td>{{ $firstDetail->bank_account }}</td>
-                                <td>{{ $firstDetail->account_holder }}</td>
-                                <td>
+                                <td style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $firstDetail->bank_name }}</strong></td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">{{ $firstDetail->bank_account }}</td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">{{ $firstDetail->account_holder }}</td>
+                                <td style="font-family: 'Noto Sans', sans-serif;">
                                     {{ $firstDetail->vendor->name ?? 'N/A' }}
                                     @if($bankGroup->count() > 1)
-                                        <br><small>+ {{ $bankGroup->count() - 1 }} vendor lainnya</small>
+                                        <br><small style="font-family: 'Noto Sans', sans-serif;">+ {{ $bankGroup->count() - 1 }} vendor lainnya</small>
                                     @endif
                                 </td>
-                                <td class="text-right font-bold">
+                                <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
                                     Rp {{ number_format($bankGroup->sum('jumlah_transfer'), 0, ',', '.') }}
                                 </td>
                             </tr>
@@ -257,8 +265,8 @@
                     </tbody>
                     <tfoot>
                         <tr style="background-color: #f8f9fa;">
-                            <td colspan="4" class="text-right font-bold">Total Transfer:</td>
-                            <td class="text-right font-bold">
+                            <td colspan="4" class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">Total Transfer:</td>
+                            <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
                                 @php
                                     $totalBankTransfer = $details->whereNotNull('bank_name')->sum('jumlah_transfer');
                                 @endphp
@@ -271,39 +279,45 @@
 
             <!-- Signature Section -->
             <div class="approval-section">
-                <h3>Persetujuan dan Tanda Tangan</h3>
+                <h3 style="font-family: 'Noto Sans', sans-serif;">Persetujuan dan Tanda Tangan</h3>
                 <div class="approval-grid">
                     <div class="approval-item">
-                        <p><strong>Admin</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>Admin</strong></p>
                         <div class="signature-space"></div>
-                        <p><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
-                        <p>{{ $notaDinas->created_at->format('d/m/Y') }}</p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;">{{ $notaDinas->created_at->format('d/m/Y') }}</p>
                     </div>
                     
                     <div class="approval-item">
-                        <p><strong>Event Manager</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>Event Manager</strong></p>
                         <div class="signature-space"></div>
-                        <p><strong>_________________</strong></p>
-                        <p>Tanggal: ___________</p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>_________________</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;">Tgl: ___________</p>
                     </div>
                     
                     <div class="approval-item">
-                        <p><strong>Finance</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>Finance</strong></p>
                         <div class="signature-space"></div>
-                        <p><strong>{{ $notaDinas->penerima->name ?? 'Finance' }}</strong></p>
-                        <p>Tanggal: ___________</p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $notaDinas->penerima->name ?? 'Finance' }}</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;">Tgl: ___________</p>
                     </div>
                     
                     <div class="approval-item">
-                        <p><strong>Pimpinan</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>Pimpinan</strong></p>
                         <div class="signature-space"></div>
-                        <p><strong>{{ $notaDinas->approver->name ?? 'Belum Disetujui' }}</strong></p>
-                        <p>{{ $notaDinas->approved_at ? $notaDinas->approved_at->format('d/m/Y') : 'Tanggal: ___________' }}</p>
+                        <p style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $notaDinas->approver->name ?? 'Belum Disetujui' }}</strong></p>
+                        <p style="font-family: 'Noto Sans', sans-serif;">{{ $notaDinas->approved_at ? $notaDinas->approved_at->format('d/m/Y') : 'Tgl: ___________' }}</p>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="footer mt-8 pt-6 border-t border-gray-300 text-center">
+            <p class="text-xs text-gray-600" style="font-family: 'Noto Sans', sans-serif;">Catatan Penting!!!</p>
+            <p class="text-xs text-gray-600" style="font-family: 'Noto Sans', sans-serif;">Pastikan semua dokumen pendukung telah dilampirkan sebelum mengajukan nota dinas.<br> Jangan sampai ada kesalahan sebelum mengirimkan nota dinas.</p>
+        </div>  
     </div>
+
+    <!-- Footer -->
 
     <script>
         // Add keyboard shortcuts

@@ -10,11 +10,11 @@
                style="color: black;">
                 📱 Preview PDF
             </a> --}}
-            <a href="{{ route('nota-dinas.download-pdf', $notaDinas) }}" 
+            {{-- <a href="{{ route('nota-dinas.download-pdf', $notaDinas) }}" 
                class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150"
                style="color: black;">
                 📥 Download PDF
-            </a>
+            </a> --}}
         </div>
 
         <!-- Header -->
@@ -22,7 +22,7 @@
         <h2 class="font-semibold text-gray-700 text-lg mt-2">No. ND: {{ $notaDinas->no_nd }}</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <p class="text-gray-600 text-sm">Tanggal: {{ $notaDinas->created_at->format('d F Y') }}</p>
+                <p class="text-gray-600 text-sm">Tgl: {{ $notaDinas->created_at->format('d F Y') }}</p>
                 <p class="text-sm text-gray-800">Diajukan oleh: {{ $notaDinas->pengirim->name ?? 'N/A' }}</p>
                 <p class="text-sm text-gray-800">Status:
                     <span
@@ -41,6 +41,16 @@
             <div>
                 <p class="text-gray-600 text-sm"><strong>Sifat:</strong> {{ $notaDinas->sifat }}</p>
                 <p class="text-gray-600 text-sm"><strong>Hal:</strong> {{ $notaDinas->hal }}</p>
+                @if($notaDinas->nd_upload)
+                    <p class="text-gray-600 text-sm mt-2">
+                        <strong>File Lampiran:</strong> 
+                        <a href="{{ asset('storage/' . $notaDinas->nd_upload) }}" 
+                           target="_blank" 
+                           class="text-blue-600 hover:text-blue-800 underline ml-1">
+                            📎 {{ basename($notaDinas->nd_upload) }}
+                        </a>
+                    </p>
+                @endif
             </div>
         </div>
 
@@ -176,6 +186,12 @@
                 </table>
             </div>
         </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer mt-8 pt-6 border-t border-gray-300 text-center">
+        <p class="text-sm text-gray-600">Catatan Penting!!!</p>
+        <p class="text-sm text-gray-600">Pastikan semua dokumen pendukung telah dilampirkan sebelum mengajukan nota dinas. Jangan sampai ada kesalahan sebelum mengirimkan nota dinas.</p>
     </div>
 
     <!-- Print Styles -->

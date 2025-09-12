@@ -60,22 +60,11 @@ class ViewNd extends Page
     {
         return [
             \Filament\Actions\Action::make('download_pdf')
-                ->label('Download PDF')
+                ->label('Details')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('primary')
                 ->url(fn (): string => route('nota-dinas.preview-web', ['notaDinas' => $this->notaDinas->id]))
-                // route('nota-dinas.preview-web', $notaDinas)
                 ->openUrlInNewTab(),
-            
-            // \Filament\Actions\Action::make('print')
-            //     ->label('Print')
-            //     ->icon('heroicon-o-printer')
-            //     ->color('gray')
-            //     ->action(fn () => $this->js('
-            //         setTimeout(function() {
-            //             window.print();
-            //         }, 100);
-            //     ')),
         ];
     }
 }

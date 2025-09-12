@@ -75,8 +75,19 @@ class NotaDinasResource extends Resource
                     ->maxLength(255),
                 Forms\Components\Textarea::make('catatan')
                     ->label('Catatan')
+                    ->placeholder('Jika ada catatan tambahan, tuliskan disini...')
                     ->rows(3)
                     ->columnSpanFull(),
+                Forms\Components\FileUpload::make('nd_upload')
+                    ->label('Upload File Nota Dinas')
+                    ->directory('nota-dinas-uploads')
+                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                    ->maxSize(1024) // 1MB
+                    ->downloadable()
+                    ->openable()
+                    ->previewable()
+                    ->columnSpanFull()
+                    ->helperText('PERHATIAN : Setelah ND ditanda tangani, SEGERA masukkan persetujuannya kesini. Max 1MB.'),
                 Forms\Components\Select::make('status')
                     ->label('Status')
                     ->options([
@@ -132,6 +143,23 @@ class NotaDinasResource extends Resource
                     ->label('Hal')
                     ->searchable()
                     ->limit(30),
+                Tables\Columns\TextColumn::make('nd_upload')
+                    ->label('File Upload')
+                    ->getStateUsing(function ($record) {
+                        return $record->nd_upload ? 'Ada' : 'Tidak';
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Ada' => 'success',
+                        'Tidak' => 'gray',
+                        default => 'gray',
+                    })
+                    ->icon(fn (string $state): string => match ($state) {
+                        'Ada' => 'heroicon-o-document-check',
+                        'Tidak' => 'heroicon-o-document-minus',
+                        default => 'heroicon-o-document',
+                    })
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -244,6 +272,13 @@ class NotaDinasResource extends Resource
                     ->icon('heroicon-o-document-text')
                     ->color('info')
                     ->url(fn (NotaDinas $record): string => static::getUrl('view-nd', ['record' => $record]))
+                    ->openUrlInNewTab(),
+                Action::make('download_file')
+                    ->label('Download File')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(fn (NotaDinas $record): bool => !empty($record->nd_upload))
+                    ->url(fn (NotaDinas $record): string => asset('storage/' . $record->nd_upload))
                     ->openUrlInNewTab(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),

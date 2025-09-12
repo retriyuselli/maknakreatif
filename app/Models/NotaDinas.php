@@ -19,8 +19,14 @@ class NotaDinas extends Model
         'hal',
         'status',           // draft, diajukan, disetujui, dibayar, ditolak
         'catatan',
+        'nd_upload',        // file upload nota dinas
         'approved_by',      // user id yang approve
         'approved_at',
+    ];
+
+    protected $casts = [
+        'tanggal' => 'date',
+        'approved_at' => 'datetime',
     ];
 
     public function details()
