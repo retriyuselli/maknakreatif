@@ -143,6 +143,25 @@ class NotaDinasResource extends Resource
                     ->label('Hal')
                     ->searchable()
                     ->limit(30),
+                Tables\Columns\TextColumn::make('details_count')
+                    ->label('Jumlah Detail')
+                    ->getStateUsing(function ($record) {
+                        return $record->details_count ?? 0;
+                    })
+                    ->badge()
+                    ->color(fn (int $state): string => match (true) {
+                        $state === 0 => 'gray',
+                        $state <= 3 => 'warning',
+                        $state <= 6 => 'success',
+                        default => 'primary',
+                    })
+                    ->icon(fn (int $state): string => match (true) {
+                        $state === 0 => 'heroicon-o-minus-circle',
+                        $state <= 3 => 'heroicon-o-exclamation-triangle',
+                        default => 'heroicon-o-check-circle',
+                    })
+                    ->sortable()
+                    ->alignCenter(),
                 Tables\Columns\TextColumn::make('nd_upload')
                     ->label('File Upload')
                     ->getStateUsing(function ($record) {
@@ -573,6 +592,7 @@ class NotaDinasResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->withCount('details')
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

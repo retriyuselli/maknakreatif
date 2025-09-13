@@ -9,7 +9,6 @@ return [
         \App\Filament\Widgets\LeaveBalanceWidget::class,
         \App\Filament\Widgets\LeaveUsageChartWidget::class,
         \App\Filament\Widgets\RecentLeaveRequestsWidget::class,
-        \App\Filament\Widgets\EmployeeLeaveOverviewWidget::class,
     ],
     
     'widget_settings' => [
