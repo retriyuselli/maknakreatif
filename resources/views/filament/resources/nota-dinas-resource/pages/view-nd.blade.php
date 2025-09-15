@@ -2,21 +2,7 @@
     <link rel="stylesheet" href="{{ asset('assets/invoice/invoice.css') }}">
 
     <div class="bg-white shadow-sm border border-gray-200 rounded-xl p-4 sm:p-6 lg:p-8">
-        <!-- Action Buttons -->
-        <div class="flex gap-3 mb-6 justify-end">
-            {{-- <a href="{{ route('nota-dinas.preview-web', $notaDinas) }}" 
-               target="_blank"
-               class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150"
-               style="color: black;">
-                📱 Preview PDF
-            </a> --}}
-            {{-- <a href="{{ route('nota-dinas.download-pdf', $notaDinas) }}" 
-               class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150"
-               style="color: black;">
-                📥 Download PDF
-            </a> --}}
-        </div>
-
+        
         <!-- Header -->
         <h1 class="font-bold text-gray-800 text-xl">SURAT PERSETUJUAN PEMBAYARAN</h1>
         <h2 class="font-semibold text-gray-700 text-lg mt-2">No. ND: {{ $notaDinas->no_nd }}</h2>
@@ -70,7 +56,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Invoice</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Jumlah</th>
+                                Jumlah (Rp)</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -103,7 +89,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                                    Rp {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}
+                                     {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}
                                 </td>
                             </tr>
                         @endforeach
@@ -113,7 +99,7 @@
                             <td colspan="4" class="px-6 py-4 text-sm font-medium text-gray-900 text-right">Total:
                             </td>
                             <td class="px-6 py-4 text-sm font-bold text-gray-900 text-right">
-                                Rp {{ number_format($totalJumlahTransfer, 0, ',', '.') }}
+                                 {{ number_format($totalJumlahTransfer, 0, ',', '.') }}
                             </td>
                         </tr>
                     </tfoot>
@@ -137,7 +123,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Atas Nama</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Jumlah Transfer</th>
+                                Jumlah (Rp)</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -167,7 +153,7 @@
                                     <div class="text-sm text-gray-900">{{ $firstDetail->account_holder }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                                    Rp {{ number_format($bankGroup->sum('jumlah_transfer'), 0, ',', '.') }}
+                                     {{ number_format($bankGroup->sum('jumlah_transfer'), 0, ',', '.') }}
                                 </td>
                             </tr>
                         @endforeach
@@ -179,7 +165,7 @@
                                 @php
                                     $totalBankTransfer = $details->whereNotNull('bank_name')->sum('jumlah_transfer');
                                 @endphp
-                                Rp {{ number_format($totalBankTransfer, 0, ',', '.') }}
+                                 {{ number_format($totalBankTransfer, 0, ',', '.') }}
                             </td>
                         </tr>
                     </tfoot>

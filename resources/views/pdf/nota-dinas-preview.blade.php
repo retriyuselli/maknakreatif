@@ -115,15 +115,7 @@
 <body class="bg-gray-100">
     <!-- Action Buttons -->
     <div class="btn-group no-print">
-        {{-- <a href="{{ route('nota-dinas.preview-pdf', $notaDinas) }}" 
-           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
-           target="_blank">
-            📱 Preview PDF
-        </a>
-        <a href="{{ route('nota-dinas.download-pdf', $notaDinas) }}" 
-           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors">
-            📥 Download PDF
-        </a> --}}
+        
         <button onclick="window.print()" 
                 class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
                 style="font-family: 'Noto Sans', sans-serif;">
@@ -179,7 +171,7 @@
                             <th style="font-family: 'Noto Sans', sans-serif;">Keperluan</th>
                             <th style="font-family: 'Noto Sans', sans-serif;">Event</th>
                             <th style="font-family: 'Noto Sans', sans-serif;">Invoice</th>
-                            <th class="text-right" style="font-family: 'Noto Sans', sans-serif;">Jumlah</th>
+                            <th class="text-right" style="font-family: 'Noto Sans', sans-serif;">Jumlah (Rp)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -208,7 +200,7 @@
                                     @endif
                                 </td>
                                 <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
-                                    Rp {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}
+                                     {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}
                                 </td>
                             </tr>
                         @endforeach
@@ -217,7 +209,7 @@
                         <tr style="background-color: #f8f9fa;">
                             <td colspan="4" class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">Total:</td>
                             <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
-                                Rp {{ number_format($totalJumlahTransfer, 0, ',', '.') }}
+                                 {{ number_format($totalJumlahTransfer, 0, ',', '.') }}
                             </td>
                         </tr>
                     </tfoot>
@@ -234,7 +226,7 @@
                             <th style="font-family: 'Noto Sans', sans-serif;">No. Rekening</th>
                             <th style="font-family: 'Noto Sans', sans-serif;">Atas Nama</th>
                             <th style="font-family: 'Noto Sans', sans-serif;">Vendor</th>
-                            <th class="text-right" style="font-family: 'Noto Sans', sans-serif;">Jumlah Transfer</th>
+                            <th class="text-right" style="font-family: 'Noto Sans', sans-serif;">Jumlah (Rp)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -258,7 +250,7 @@
                                     @endif
                                 </td>
                                 <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
-                                    Rp {{ number_format($bankGroup->sum('jumlah_transfer'), 0, ',', '.') }}
+                                     {{ number_format($bankGroup->sum('jumlah_transfer'), 0, ',', '.') }}
                                 </td>
                             </tr>
                         @endforeach
@@ -270,7 +262,7 @@
                                 @php
                                     $totalBankTransfer = $details->whereNotNull('bank_name')->sum('jumlah_transfer');
                                 @endphp
-                                Rp {{ number_format($totalBankTransfer, 0, ',', '.') }}
+                                 {{ number_format($totalBankTransfer, 0, ',', '.') }}
                             </td>
                         </tr>
                     </tfoot>
