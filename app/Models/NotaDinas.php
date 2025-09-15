@@ -12,6 +12,7 @@ class NotaDinas extends Model
 
     protected $fillable = [
         'no_nd',
+        'kategori_nd',
         'tanggal',
         'pengirim_id',      // relasi ke user/admin
         'penerima_id',      // relasi ke user/finance
@@ -52,6 +53,58 @@ class NotaDinas extends Model
     public function getFormattedLabelAttribute()
     {
         return "ND-{$this->no_nd} - {$this->hal}";
+    }
+
+    /**
+     * Generate nomor nota dinas otomatis berdasarkan kategori dan tahun
+     * Format: ND/[KATEGORI]/[NOMOR_URUT]/[TAHUN]
+     */
+    public static function generateNomorND($kategori = 'BIS', $tahun = null)
+    {
+        if (!$tahun) {
+            $tahun = date('Y');
+        }
+
+        // Validasi kategori
+        $validKategori = ['BIS', 'OPS', 'ADM'];
+        if (!in_array(strtoupper($kategori), $validKategori)) {
+            $kategori = 'BIS'; // default
+        }
+        
+        $kategori = strtoupper($kategori);
+
+        // Cari nomor urut terakhir untuk kategori dan tahun yang sama
+        $lastNumber = self::where('no_nd', 'LIKE', "ND/{$kategori}/%/{$tahun}")
+            ->orderBy('no_nd', 'desc')
+            ->first();
+
+        $nextNumber = 1;
+        
+        if ($lastNumber) {
+            // Extract nomor urut dari format ND/BIS/001/2024
+            $parts = explode('/', $lastNumber->no_nd);
+            if (count($parts) >= 3) {
+                $currentNumber = intval($parts[2]);
+                $nextNumber = $currentNumber + 1;
+            }
+        }
+
+        // Format nomor dengan leading zeros (3 digit)
+        $formattedNumber = str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        
+        return "ND/{$kategori}/{$formattedNumber}/{$tahun}";
+    }
+
+    /**
+     * Get available categories for nota dinas
+     */
+    public static function getKategoriOptions()
+    {
+        return [
+            'BIS' => 'Bisnis',
+            'OPS' => 'Operasional', 
+            'ADM' => 'Administrasi'
+        ];
     }
 
     /**

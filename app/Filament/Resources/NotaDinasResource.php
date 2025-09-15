@@ -38,12 +38,29 @@ class NotaDinasResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Select::make('kategori_nd')
+                    ->label('Kategori Nota Dinas')
+                    ->options(NotaDinas::getKategoriOptions())
+                    ->default('BIS')
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                        // Auto generate nomor when kategori changes
+                        $tahun = date('Y');
+                        $nomorBaru = NotaDinas::generateNomorND($state, $tahun);
+                        $set('no_nd', $nomorBaru);
+                    })
+                    ->helperText('Pilih kategori untuk generate nomor otomatis'),
                 Forms\Components\TextInput::make('no_nd')
                     ->label('Nomor ND')
                     ->required()
                     ->unique(table: 'nota_dinas', column: 'no_nd', ignoreRecord: true)
-                    ->placeholder('Xxx')
-                    ->maxLength(255),
+                    ->placeholder('ND/BIS/001/2024')
+                    ->maxLength(255)
+                    ->default(function () {
+                        return NotaDinas::generateNomorND('BIS');
+                    })
+                    ->helperText('Nomor akan ter-generate otomatis sesuai kategori dan tahun'),
                 Forms\Components\DatePicker::make('tanggal')
                     ->label('Tanggal')
                     ->required()
@@ -116,6 +133,19 @@ class NotaDinasResource extends Resource
                 Tables\Columns\TextColumn::make('no_nd')
                     ->label('Nomor ND')
                     ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('kategori_nd')
+                    ->label('Kategori')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'BIS' => 'success',
+                        'OPS' => 'info',
+                        'ADM' => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => 
+                        NotaDinas::getKategoriOptions()[$state] ?? $state
+                    )
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tanggal')
                     ->label('Tanggal')
@@ -219,6 +249,9 @@ class NotaDinasResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('kategori_nd')
+                    ->label('Kategori')
+                    ->options(NotaDinas::getKategoriOptions()),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options([
