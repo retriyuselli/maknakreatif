@@ -22,7 +22,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\BulkAction;
@@ -240,13 +239,15 @@ class LeaveRequestResource extends Resource
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                BadgeColumn::make('status')
+                TextColumn::make('status')
                     ->label('Status')
-                    ->colors([
-                        'warning' => 'pending',
-                        'success' => 'approved',
-                        'danger' => 'rejected',
-                    ])
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'pending' => 'warning',
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
                     ->formatStateUsing(function (string $state): string {
                         return match ($state) {
                             'pending' => 'Menunggu',
