@@ -69,7 +69,11 @@ class NotaDinasResource extends Resource
                     ->label('Pengirim')
                     ->relationship('pengirim', 'name')
                     ->default(Auth::id())
-                    ->disabled()
+                    ->disabled(function (): bool {
+                        /** @var User $user */
+                        $user = Auth::user();
+                        return !($user && $user->hasRole('super_admin'));
+                    })
                     ->dehydrated()
                     ->required(),
                 Forms\Components\Select::make('penerima_id')
