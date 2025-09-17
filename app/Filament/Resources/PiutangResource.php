@@ -29,7 +29,7 @@ class PiutangResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Piutang';
 
-    protected static ?string $navigationGroup = 'Keuangan';
+    protected static ?string $navigationGroup = 'Finance';
 
     protected static ?int $navigationSort = 3;
 

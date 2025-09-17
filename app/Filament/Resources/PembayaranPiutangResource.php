@@ -28,7 +28,7 @@ class PembayaranPiutangResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Pembayaran Piutang';
 
-    protected static ?string $navigationGroup = 'Keuangan';
+    protected static ?string $navigationGroup = 'Finance';
 
     protected static ?int $navigationSort = 4;
 
