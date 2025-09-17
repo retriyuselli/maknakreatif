@@ -65,10 +65,18 @@ class PiutangResource extends Resource
                                     ->required(),
                             ]),
 
-                        Forms\Components\TextInput::make('nama_debitur')
-                            ->label('Nama Debitur')
-                            ->required()
-                            ->placeholder('Nama yang berhutang kepada kita'),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('nama_debitur')
+                                    ->label('Nama Debitur')
+                                    ->required()
+                                    ->placeholder('Nama yang berhutang kepada kita'),
+
+                                Forms\Components\TextInput::make('kontak_debitur')
+                                    ->label('Kontak Debitur')
+                                    ->placeholder('No. HP/Telepon untuk follow up')
+                                    ->tel(),
+                            ]),
 
                         Forms\Components\Textarea::make('keterangan')
                             ->label('Keterangan Piutang')
@@ -187,6 +195,11 @@ class PiutangResource extends Resource
                     ->searchable()
                     ->limit(20),
 
+                Tables\Columns\TextColumn::make('kontak_debitur')
+                    ->label('Kontak')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('total_piutang')
                     ->label('Total Piutang')
                     ->money('IDR')
@@ -284,8 +297,15 @@ class PiutangResource extends Resource
                                     ->color(fn ($state) => $state instanceof StatusPiutang ? $state->getColor() : StatusPiutang::from($state)->getColor()),
                             ]),
 
-                        Infolists\Components\TextEntry::make('nama_debitur')
-                            ->label('Debitur'),
+                        Infolists\Components\Grid::make(2)
+                            ->schema([
+                                Infolists\Components\TextEntry::make('nama_debitur')
+                                    ->label('Debitur'),
+
+                                Infolists\Components\TextEntry::make('kontak_debitur')
+                                    ->label('Kontak Debitur')
+                                    ->visible(fn ($record) => $record->kontak_debitur),
+                            ]),
 
                         Infolists\Components\TextEntry::make('keterangan')
                             ->label('Keterangan')
@@ -375,5 +395,14 @@ class PiutangResource extends Resource
     public static function getNavigationBadgeColor(): string|array|null
     {
         return 'warning';
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            PiutangResource\Widgets\PiutangOverviewWidget::class,
+            PiutangResource\Widgets\PiutangJatuhTempoWidget::class,
+            PiutangResource\Widgets\TopDebiturWidget::class,
+        ];
     }
 }

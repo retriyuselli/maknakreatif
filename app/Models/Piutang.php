@@ -19,6 +19,7 @@ class Piutang extends Model
         'jenis_piutang',
         'dibuat_oleh',
         'nama_debitur', // kreditor -> debitur (yang berhutang ke kita)
+        'kontak_debitur',
         'keterangan',
         'jumlah_pokok',
         'persentase_bunga',

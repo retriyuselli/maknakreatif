@@ -16,4 +16,19 @@ class ListPiutangs extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PiutangResource\Widgets\PiutangOverviewWidget::class,
+        ];
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        return [
+            PiutangResource\Widgets\PiutangJatuhTempoWidget::class,
+            PiutangResource\Widgets\TopDebiturWidget::class,
+        ];
+    }
 }
