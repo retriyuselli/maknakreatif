@@ -245,11 +245,11 @@ class NotaDinasDetailResource extends Resource
                     ->live(),
                 Forms\Components\Select::make('order_id')
                     ->label('Event (Order)')
-                    ->relationship('order', 'name', fn ($query) => $query->where('status', OrderStatus::Processing))
+                    ->relationship('order', 'name', fn ($query) => $query->whereIn('status', [OrderStatus::Processing, OrderStatus::Done]))
                     ->searchable()
                     ->preload()
                     ->visible(fn (Forms\Get $get): bool => $get('jenis_pengeluaran') === PengeluaranJenis::WEDDING->value)
-                    ->placeholder('Pilih order dengan status processing'),
+                    ->placeholder('Pilih order (Processing / Done)'),
                 Forms\Components\TextInput::make('event')
                     ->label('Event')
                     ->maxLength(255)
