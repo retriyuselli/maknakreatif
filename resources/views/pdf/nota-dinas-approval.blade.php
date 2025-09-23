@@ -213,7 +213,7 @@
                                     @if ($detail->status_invoice)
                                         <br><small>({{ ucfirst($detail->status_invoice) }})</small>
                                     @endif
-                                    @if ($detail->nd_upload)
+                                    @if ($detail->invoice_file)
                                         <br><small style="color: #059669; font-weight: bold;">📎 File Ada</small>
                                     @else
                                         <br><small style="color: #dc2626;">📄 Tidak Ada File</small>

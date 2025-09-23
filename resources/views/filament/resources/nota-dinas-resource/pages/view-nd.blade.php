@@ -87,7 +87,7 @@
                                         <div class="text-xs text-gray-500">({{ ucfirst($detail->status_invoice) }})
                                         </div>
                                     @endif
-                                    @if ($detail->nd_upload)
+                                    @if ($detail->invoice_file)
                                         <div class="text-xs text-green-600 font-medium">📎 File Ada</div>
                                     @else
                                         <div class="text-xs text-red-500">📄 Tidak Ada File</div>

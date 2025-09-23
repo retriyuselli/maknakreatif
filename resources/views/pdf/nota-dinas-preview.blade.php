@@ -198,7 +198,7 @@
                                     @if($detail->status_invoice)
                                         <br><small style="font-family: 'Noto Sans', sans-serif;">({{ ucfirst($detail->status_invoice) }})</small>
                                     @endif
-                                    @if ($detail->nd_upload)
+                                    @if ($detail->invoice_file)
                                         <br><small style="color: #059669; font-weight: bold; font-family: 'Noto Sans', sans-serif;">📎 File Ada</small>
                                     @else
                                         <br><small style="color: #dc2626; font-family: 'Noto Sans', sans-serif;">📄 Tidak Ada File</small>

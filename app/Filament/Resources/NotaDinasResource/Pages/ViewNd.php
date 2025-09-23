@@ -23,6 +23,9 @@ class ViewNd extends Page
             'pengirim',
             'penerima', 
             'approver',
+            'details' => function($query) {
+                $query->select('*'); // Ensure all fields are selected including invoice_file
+            },
             'details.vendor',
             'details.order.prospect'
         ])->findOrFail($record);
