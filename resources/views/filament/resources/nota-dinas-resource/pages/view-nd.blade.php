@@ -87,6 +87,11 @@
                                         <div class="text-xs text-gray-500">({{ ucfirst($detail->status_invoice) }})
                                         </div>
                                     @endif
+                                    @if ($detail->nd_upload)
+                                        <div class="text-xs text-green-600 font-medium">📎 File Ada</div>
+                                    @else
+                                        <div class="text-xs text-red-500">📄 Tidak Ada File</div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                                      {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}

@@ -20,17 +20,11 @@ use Filament\Support\Enums\FontWeight;
 class PiutangResource extends Resource
 {
     protected static ?string $model = Piutang::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
-
     protected static ?string $navigationLabel = 'Piutang';
-
     protected static ?string $modelLabel = 'Piutang';
-
     protected static ?string $pluralModelLabel = 'Piutang';
-
     protected static ?string $navigationGroup = 'Finance';
-
     protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form

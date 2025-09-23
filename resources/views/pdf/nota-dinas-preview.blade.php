@@ -198,6 +198,11 @@
                                     @if($detail->status_invoice)
                                         <br><small style="font-family: 'Noto Sans', sans-serif;">({{ ucfirst($detail->status_invoice) }})</small>
                                     @endif
+                                    @if ($detail->nd_upload)
+                                        <br><small style="color: #059669; font-weight: bold; font-family: 'Noto Sans', sans-serif;">📎 File Ada</small>
+                                    @else
+                                        <br><small style="color: #dc2626; font-family: 'Noto Sans', sans-serif;">📄 Tidak Ada File</small>
+                                    @endif
                                 </td>
                                 <td class="text-right font-bold" style="font-family: 'Noto Sans', sans-serif;">
                                      {{ number_format($detail->jumlah_transfer, 0, ',', '.') }}
