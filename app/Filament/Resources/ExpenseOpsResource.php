@@ -358,7 +358,7 @@ class ExpenseOpsResource extends Resource
                     ->numeric()
                     ->prefix('Rp. ')
                     ->sortable()
-                    ->formatStateUsing(fn ($state) => $state ? 'Rp. ' . number_format($state, 0, ',', '.') : 'Rp. 0')
+                    // ->formatStateUsing(fn ($state) => $state ? 'Rp. ' . number_format($state, 0, ',', '.') : 'Rp. 0')
                     ->summarize([
                         Tables\Columns\Summarizers\Sum::make()
                             ->formatStateUsing(fn($state): string => 'Total: Rp. ' . number_format($state, 0, ',', '.'))

@@ -267,7 +267,7 @@ class NotaDinasDetailResource extends Resource
                     ->label('Nomor Invoice')
                     ->maxLength(255)
                     ->placeholder('INV-001'),
-                    Forms\Components\Select::make('status_invoice')
+                Forms\Components\Select::make('status_invoice')
                     ->label('Status Invoice')
                     ->options([
                         'belum_dibayar' => 'Belum Dibayar',
@@ -276,14 +276,14 @@ class NotaDinasDetailResource extends Resource
                         ])
                         ->default('belum_dibayar')
                         ->required(),
-                    Forms\Components\FileUpload::make('invoice_file')
-                        ->label('File Invoice')
-                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
-                        ->maxSize(5120) // 5MB
-                        ->directory('nota-dinas/invoices')
-                        ->visibility('private')
-                        ->downloadable()
-                        ->previewable(),
+                Forms\Components\FileUpload::make('invoice_file')
+                    ->label('File Invoice')
+                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                    ->maxSize(5120) // 5MB
+                    ->directory('nota-dinas/invoices')
+                    ->visibility('private')
+                    ->downloadable()
+                    ->previewable(),
             ]);
     }
 

@@ -357,4 +357,11 @@ class PendapatanLainResource extends Resource
     {
         return 2;
     }
+
+    public static function getWidgets(): array
+    {
+        return [
+            PendapatanLainResource\Widgets\PendapatanLainOverviewWidget::class,
+        ];
+    }
 }

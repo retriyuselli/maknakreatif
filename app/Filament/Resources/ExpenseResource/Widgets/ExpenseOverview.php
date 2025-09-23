@@ -44,7 +44,7 @@ class ExpenseOverview extends BaseWidget
         }
 
         // Format the change description
-        $changeDescription = number_format(abs($changePercentage), 1) . '% ' . ($changePercentage >= 0 ? 'increase' : 'decrease');
+        $changeDescription = number_format(abs($changePercentage), 1) . '% ' . ($changePercentage >= 0 ? 'naik' : 'turun');
 
         // Get total number of expenses without an image
         $expensesWithoutImageCount = Expense::whereNull('image')->orWhere('image', '')->count();
@@ -56,22 +56,22 @@ class ExpenseOverview extends BaseWidget
         $currentYearExpensesCount = Expense::whereYear('date_expense', Carbon::now()->year)->count();
 
         return [
-            Stat::make('Total Expenses (This Month)', '' . number_format($currentMonthExpenses, 0, ',', '.'))
-                ->description($changeDescription . ' from last month')
+            Stat::make('Total Pengeluaran (Bulan Ini)', 'Rp ' . number_format($currentMonthExpenses, 0, ',', '.'))
+                ->description($changeDescription . ' dari bulan lalu')
                 ->descriptionIcon($trendIcon, IconPosition::Before)
                 ->color($trendColor),
-            // Stat::make('Total Expenses (This Year)', '' . number_format($currentYearExpensesAmount, 0, ',', '.'))
-            //     ->description('Total expenses recorded this year')
+            // Stat::make('Total Pengeluaran (Tahun Ini)', 'Rp ' . number_format($currentYearExpensesAmount, 0, ',', '.'))
+            //     ->description('Total pengeluaran tercatat tahun ini')
             //     ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
             //     ->color('primary'),
 
-            Stat::make('Number of Expenses (This Year)', $currentYearExpensesCount)
-                ->description('Total expense records this year')
+            Stat::make('Jumlah Pengeluaran (Tahun Ini)', $currentYearExpensesCount)
+                ->description('Total catatan pengeluaran tahun ini')
                 ->descriptionIcon('heroicon-m-document-duplicate', IconPosition::Before)
                 ->color('info'),
 
-            Stat::make('Expenses Without Image', $expensesWithoutImageCount)
-                ->description('Records needing payment proof')
+            Stat::make('Pengeluaran Tanpa Bukti', $expensesWithoutImageCount)
+                ->description('Catatan yang memerlukan bukti pembayaran')
                 ->descriptionIcon('heroicon-m-exclamation-triangle', IconPosition::Before)
                 ->color('warning'),
         ];

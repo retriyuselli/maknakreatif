@@ -683,4 +683,11 @@ class PengeluaranLainResource extends Resource
     {
         return "Total pengeluaran lain tahun 2025 (di luar operasional harian)";
     }
+
+    public static function getWidgets(): array
+    {
+        return [
+            PengeluaranLainResource\Widgets\PengeluaranOverviewWidgets::class,
+        ];
+    }
 }

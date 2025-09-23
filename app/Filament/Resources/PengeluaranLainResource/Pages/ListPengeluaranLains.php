@@ -18,4 +18,11 @@ class ListPengeluaranLains extends ListRecords
                 ->icon('heroicon-o-plus'),
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PengeluaranLainResource\Widgets\PengeluaranOverviewWidgets::class,
+        ];
+    }
 }

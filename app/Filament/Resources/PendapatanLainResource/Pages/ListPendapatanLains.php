@@ -16,4 +16,11 @@ class ListPendapatanLains extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PendapatanLainResource\Widgets\PendapatanLainOverviewWidget::class,
+        ];
+    }
 }

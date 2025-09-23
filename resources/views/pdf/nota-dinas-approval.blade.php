@@ -146,13 +146,12 @@
                     <div>
                         <h1 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">SURAT PERSETUJUAN PEMBAYARAN
                         </h1>
-                        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">No. ND:
-                            {{ $notaDinas->no_nd }}</h2>
+                        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">{{ $notaDinas->no_nd }}</h2>
                         <p style="font-size: 11px; color: #666;">Tgl: {{ $notaDinas->created_at->format('d F Y') }}
                         </p>
                     </div>
                     <div>
-                        <img src="{{ asset('images/logomkiinv.png') }}" alt="Logo" style="height: 40px;">
+                        <img src="{{ asset('images/logomkiinv.png') }}" alt="Logo" style="height: 30px;">
                     </div>
                 </div>
             </div>
@@ -160,12 +159,12 @@
             <!-- Company Info -->
             <div class="company-info">
                 <div class="company-left">
-                    <h3>Diajukan oleh:</h3>
-                    <p><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
+                    <h3>Diajukan oleh</h3>
+                    <p>Nama: <strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
                     <p>Status: <strong>{{ ucfirst($notaDinas->status) }}</strong></p>
                 </div>
                 <div class="company-right">
-                    <h3>Informasi Nota Dinas:</h3>
+                    <h3>Informasi Nota Dinas</h3>
                     <p><strong>Sifat:</strong> {{ $notaDinas->sifat }}</p>
                     <p><strong>Hal:</strong> {{ $notaDinas->hal }}</p>
                     @if ($notaDinas->nd_upload)
@@ -295,7 +294,7 @@
                         <p><strong>Admin</strong></p>
                         <div class="signature-space"></div>
                         <p><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
-                        <p>{{ $notaDinas->created_at->format('d/m/Y') }}</p>
+                        <p>Tgl: {{ $notaDinas->created_at->format('d/m/Y') }}</p>
                     </div>
 
                     <div class="approval-item">

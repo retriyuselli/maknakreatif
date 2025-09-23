@@ -44,7 +44,7 @@ class ExpenseOpsOverview extends BaseWidget
         }
 
         // Format the change description
-        $changeDescription = number_format(abs($changePercentage), 1) . '% ' . ($changePercentage >= 0 ? 'increase' : 'decrease');
+        $changeDescription = number_format(abs($changePercentage), 1) . '% ' . ($changePercentage >= 0 ? 'naik' : 'turun');
 
         // Get total number of operational expenses without an image
         $opsExpensesWithoutImageCount = ExpenseOps::whereNull('image')->orWhere('image', '')->count();
@@ -56,23 +56,23 @@ class ExpenseOpsOverview extends BaseWidget
         $currentYearOpsExpensesCount = ExpenseOps::whereYear('date_expense', Carbon::now()->year)->count();
 
         return [
-            Stat::make('Total Operational Expenses (This Month)', '' . number_format($currentMonthOpsExpenses, 0, ',', '.'))
-                ->description($changeDescription . ' from last month')
+            Stat::make('Total Pengeluaran Operasional (Bulan Ini)', 'Rp ' . number_format($currentMonthOpsExpenses, 0, ',', '.'))
+                ->description($changeDescription . ' dari bulan lalu')
                 ->descriptionIcon($trendIcon, IconPosition::Before)
                 ->color($trendColor),
             
-            // Stat::make('Total Operational Expenses (This Year)', '' . number_format($currentYearOpsExpenses, 0, ',', '.'))
-            //     ->description('Total amount spent this year')
+            // Stat::make('Total Pengeluaran Operasional (Tahun Ini)', 'Rp ' . number_format($currentYearOpsExpenses, 0, ',', '.'))
+            //     ->description('Total pengeluaran tahun ini')
             //     ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
             //     ->color('primary'),
 
-            Stat::make('Total Transactions (This Year)', $currentYearOpsExpensesCount)
-                ->description('Number of expense records this year')
+            Stat::make('Total Transaksi (Tahun Ini)', $currentYearOpsExpensesCount)
+                ->description('Jumlah catatan pengeluaran tahun ini')
                 ->descriptionIcon('heroicon-m-receipt-percent', IconPosition::Before)
                 ->color('success'),
 
-            Stat::make('Expenses Without Proof', $opsExpensesWithoutImageCount)
-                ->description('Records needing payment proof')
+            Stat::make('Pengeluaran Tanpa Bukti', $opsExpensesWithoutImageCount)
+                ->description('Catatan yang memerlukan bukti pembayaran')
                 ->descriptionIcon('heroicon-m-exclamation-triangle', IconPosition::Before)
                 ->color('warning'),
         ];

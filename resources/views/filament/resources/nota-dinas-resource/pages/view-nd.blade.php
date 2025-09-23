@@ -5,7 +5,7 @@
         
         <!-- Header -->
         <h1 class="font-bold text-gray-800 text-xl">SURAT PERSETUJUAN PEMBAYARAN</h1>
-        <h2 class="font-semibold text-gray-700 text-lg mt-2">No. ND: {{ $notaDinas->no_nd }}</h2>
+        <h2 class="font-semibold text-gray-700 text-lg mt-2">{{ $notaDinas->no_nd }}</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <p class="text-gray-600 text-sm">Tgl: {{ $notaDinas->created_at->format('d F Y') }}</p>
@@ -83,10 +83,6 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {{ $detail->invoice_number ?? '-' }}
-                                    @if ($detail->status_invoice)
-                                        <div class="text-xs text-gray-500">({{ ucfirst($detail->status_invoice) }})
-                                        </div>
-                                    @endif
                                     @if ($detail->invoice_file)
                                         <div class="text-xs text-green-600 font-medium">📎 File Ada</div>
                                     @else

@@ -135,11 +135,11 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <h1 style="font-size: 18px; font-weight: bold; margin-bottom: 5px; font-family: 'Noto Sans', sans-serif;">SURAT PERSETUJUAN PEMBAYARAN</h1>
-                        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 5px; font-family: 'Noto Sans', sans-serif;">No. ND: {{ $notaDinas->no_nd }}</h2>
+                        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 5px; font-family: 'Noto Sans', sans-serif;">{{ $notaDinas->no_nd }}</h2>
                         <p style="font-size: 11px; color: #666; font-family: 'Noto Sans', sans-serif;">Tgl: {{ $notaDinas->created_at->format('d F Y') }}</p>
                     </div>
                     <div>
-                        <img src="{{ asset('images/logomkiinv.png') }}" alt="Logo" style="height: 60px;">
+                        <img src="{{ asset('images/logomkiinv.png') }}" alt="Logo" style="height: 40px;">
                     </div>
                 </div>
             </div>
@@ -147,12 +147,12 @@
             <!-- Company Info -->
             <div class="company-info">
                 <div class="company-left">
-                    <h3 style="font-family: 'Noto Sans', sans-serif;">Diajukan oleh:</h3>
-                    <p style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
+                    <h3 style="font-family: 'Noto Sans', sans-serif;">Diajukan Oleh</h3>
+                    <p style="font-family: 'Noto Sans', sans-serif;">Nama: <strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
                     <p style="font-family: 'Noto Sans', sans-serif;">Status: <strong>{{ ucfirst($notaDinas->status) }}</strong></p>
                 </div>
                                 <div class="company-right">
-                    <h3 style="font-family: 'Noto Sans', sans-serif;">Informasi Nota Dinas:</h3>
+                    <h3 style="font-family: 'Noto Sans', sans-serif;">Informasi Nota Dinas</h3>
                     <p style="font-family: 'Noto Sans', sans-serif;"><strong>Sifat:</strong> {{ $notaDinas->sifat }}</p>
                     <p style="font-family: 'Noto Sans', sans-serif;"><strong>Hal:</strong> {{ $notaDinas->hal }}</p>
                     @if($notaDinas->nd_upload)
@@ -282,7 +282,7 @@
                         <p style="font-family: 'Noto Sans', sans-serif;"><strong>Admin</strong></p>
                         <div class="signature-space"></div>
                         <p style="font-family: 'Noto Sans', sans-serif;"><strong>{{ $notaDinas->pengirim->name ?? 'N/A' }}</strong></p>
-                        <p style="font-family: 'Noto Sans', sans-serif;">{{ $notaDinas->created_at->format('d/m/Y') }}</p>
+                        <p style="font-family: 'Noto Sans', sans-serif;">Tgl: {{ $notaDinas->created_at->format('d/m/Y') }}</p>
                     </div>
                     
                     <div class="approval-item">
@@ -310,7 +310,7 @@
         </div>
         <div class="footer mt-8 pt-6 border-t border-gray-300 text-center">
             <p class="text-xs text-gray-600" style="font-family: 'Noto Sans', sans-serif;">Catatan Penting!!!</p>
-            <p class="text-xs text-gray-600" style="font-family: 'Noto Sans', sans-serif;">Pastikan semua dokumen pendukung telah dilampirkan sebelum mengajukan nota dinas.<br> Jangan sampai ada kesalahan sebelum mengirimkan nota dinas.</p>
+            <p class="text-xs pb-10 mb-5 text-gray-600" style="font-family: 'Noto Sans', sans-serif;">Pastikan semua dokumen pendukung telah dilampirkan sebelum mengajukan nota dinas.<br> Jangan sampai ada kesalahan sebelum mengirimkan nota dinas.</p>
         </div>  
     </div>
 
