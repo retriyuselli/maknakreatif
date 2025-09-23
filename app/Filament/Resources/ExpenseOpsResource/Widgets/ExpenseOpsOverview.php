@@ -56,12 +56,12 @@ class ExpenseOpsOverview extends BaseWidget
         $currentYearOpsExpensesCount = ExpenseOps::whereYear('date_expense', Carbon::now()->year)->count();
 
         return [
-            Stat::make('Total Pengeluaran Operasional (Bulan Ini)', 'Rp ' . number_format($currentMonthOpsExpenses, 0, ',', '.'))
+            Stat::make('Total Pengeluaran Operasional (Bulan Ini)', '' . number_format($currentMonthOpsExpenses, 0, ',', '.'))
                 ->description($changeDescription . ' dari bulan lalu')
                 ->descriptionIcon($trendIcon, IconPosition::Before)
                 ->color($trendColor),
             
-            // Stat::make('Total Pengeluaran Operasional (Tahun Ini)', 'Rp ' . number_format($currentYearOpsExpenses, 0, ',', '.'))
+            // Stat::make('Total Pengeluaran Operasional (Tahun Ini)', '' . number_format($currentYearOpsExpenses, 0, ',', '.'))
             //     ->description('Total pengeluaran tahun ini')
             //     ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
             //     ->color('primary'),

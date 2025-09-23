@@ -56,11 +56,11 @@ class ExpenseOverview extends BaseWidget
         $currentYearExpensesCount = Expense::whereYear('date_expense', Carbon::now()->year)->count();
 
         return [
-            Stat::make('Total Pengeluaran (Bulan Ini)', 'Rp ' . number_format($currentMonthExpenses, 0, ',', '.'))
+            Stat::make('Total Pengeluaran (Bulan Ini)', '' . number_format($currentMonthExpenses, 0, ',', '.'))
                 ->description($changeDescription . ' dari bulan lalu')
                 ->descriptionIcon($trendIcon, IconPosition::Before)
                 ->color($trendColor),
-            // Stat::make('Total Pengeluaran (Tahun Ini)', 'Rp ' . number_format($currentYearExpensesAmount, 0, ',', '.'))
+            // Stat::make('Total Pengeluaran (Tahun Ini)', '' . number_format($currentYearExpensesAmount, 0, ',', '.'))
             //     ->description('Total pengeluaran tercatat tahun ini')
             //     ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
             //     ->color('primary'),
