@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderProfitLossController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\SimulasiDisplayController;
 use App\Http\Controllers\ProductDisplayController;
 use App\Http\Controllers\ProspectController;
@@ -352,6 +353,115 @@ Route::get('/nota-dinas/{notaDinas}/preview-pdf', [App\Http\Controllers\NotaDina
 
 Route::get('/nota-dinas/{notaDinas}/download-pdf', [App\Http\Controllers\NotaDinasPdfController::class, 'downloadPdf'])
     ->name('nota-dinas.download-pdf')
+    ->middleware('auth');
+
+// Account Manager Report Preview Route
+Route::get('/account-manager/preview/{userId}/{year}/{month}', function ($userId, $year, $month) {
+    $user = Auth::user();
+    $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+    
+    // Authorization check
+    if (!$isSuperAdmin && (int)$userId !== $user->id) {
+        abort(403, 'Anda tidak memiliki akses untuk melihat report ini.');
+    }
+    
+    // Create instance of ListAccountManagerTargets to access the method
+    $listPage = new \App\Filament\Resources\AccountManagerTargetResource\Pages\ListAccountManagerTargets();
+    $previewContent = $listPage->getReportPreviewContent((int)$userId, (int)$year, (int)$month);
+    
+    // Return preview page with download link
+    return response()->view('account-manager-preview', [
+        'previewContent' => $previewContent,
+        'downloadUrl' => route('account-manager.report.html', ['userId' => $userId, 'year' => $year, 'month' => $month])
+    ]);
+})
+    ->name('account-manager.preview')
+    ->middleware('auth');
+
+// Account Manager Report Route (Old - for backward compatibility)
+Route::get('/account-manager/report-old/{userId}/{year}/{month}', function ($userId, $year, $month) {
+    $user = Auth::user();
+    $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+    
+    // Authorization check
+    if (!$isSuperAdmin && (int)$userId !== $user->id) {
+        abort(403, 'Anda tidak memiliki akses untuk mendownload report ini.');
+    }
+    
+    // Create instance of ListAccountManagerTargets to access the method
+    $listPage = new \App\Filament\Resources\AccountManagerTargetResource\Pages\ListAccountManagerTargets();
+    return $listPage->generateAccountManagerReport((int)$userId, (int)$year, (int)$month);
+})
+    ->name('account-manager.report.old')
+    ->middleware('auth');
+
+// Account Manager PDF Stream Route
+Route::get('/account-manager/pdf/stream/{userId}/{year}/{month}', function ($userId, $year, $month) {
+    $user = Auth::user();
+    $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+    
+    // Authorization check
+    if (!$isSuperAdmin && (int)$userId !== $user->id) {
+        abort(403, 'Anda tidak memiliki akses untuk melihat PDF report ini.');
+    }
+    
+    // Create instance of ListAccountManagerTargets to access the method
+    $listPage = new \App\Filament\Resources\AccountManagerTargetResource\Pages\ListAccountManagerTargets();
+    return $listPage->streamAccountManagerPdf((int)$userId, (int)$year, (int)$month);
+})
+    ->name('account-manager.report.pdf.stream')
+    ->middleware('auth');
+
+// Account Manager PDF Download Route
+Route::get('/account-manager/pdf/download/{userId}/{year}/{month}', function ($userId, $year, $month) {
+    $user = Auth::user();
+    $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+    
+    // Authorization check
+    if (!$isSuperAdmin && (int)$userId !== $user->id) {
+        abort(403, 'Anda tidak memiliki akses untuk mendownload PDF report ini.');
+    }
+    
+    // Create instance of ListAccountManagerTargets to access the method
+    $listPage = new \App\Filament\Resources\AccountManagerTargetResource\Pages\ListAccountManagerTargets();
+    return $listPage->downloadAccountManagerPdf((int)$userId, (int)$year, (int)$month);
+})
+    ->name('account-manager.report.pdf.download')
+    ->middleware('auth');
+
+// Account Manager HTML Report Route (No PDF)
+Route::get('/account-manager/report/{userId}/{year}/{month}', function ($userId, $year, $month) {
+    $user = Auth::user();
+    $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+    
+    // Authorization check
+    if (!$isSuperAdmin && (int)$userId !== $user->id) {
+        abort(403, 'Anda tidak memiliki akses untuk melihat report ini.');
+    }
+    
+    // Create instance of ListAccountManagerTargets to access the method
+    $listPage = new \App\Filament\Resources\AccountManagerTargetResource\Pages\ListAccountManagerTargets();
+    $reportData = $listPage->getPdfReportData((int)$userId, (int)$year, (int)$month);
+    
+    // Get account manager data
+    $accountManager = \App\Models\User::find($userId);
+    if (!$accountManager) {
+        abort(404, 'Account Manager tidak ditemukan.');
+    }
+    
+    // Convert month to name
+    $monthName = \Carbon\Carbon::createFromDate($year, $month, 1)->format('F');
+
+    // Return HTML view directly
+    return view('account-manager-show', [
+        'accountManager' => $accountManager,
+        'year' => $year,
+        'month' => $month,
+        'monthName' => $monthName,
+        'reportData' => $reportData
+    ]);
+})
+    ->name('account-manager.report.html')
     ->middleware('auth');
 
 // FALLBACK ROUTE - Modified to exclude Livewire routes

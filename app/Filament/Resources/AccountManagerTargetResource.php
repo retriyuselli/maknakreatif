@@ -46,9 +46,9 @@ class AccountManagerTargetResource extends Resource
             return false;
         }
 
-        // Use Spatie Permission to check roles
-        // @phpstan-ignore-next-line
-        return $user->hasRole(['super_admin', 'Account Manager']);
+        // Check if user has super_admin or Account Manager role
+        $roleNames = $user->roles->pluck('name');
+        return $roleNames->contains('super_admin') || $roleNames->contains('Account Manager');
     }
 
     /**
@@ -79,8 +79,7 @@ class AccountManagerTargetResource extends Resource
         }
 
         // Only super_admin can create
-        // @phpstan-ignore-next-line
-        return $user->hasRole('super_admin');
+        return $user->roles->where('name', 'super_admin')->count() > 0;
     }
 
     /**
@@ -95,8 +94,7 @@ class AccountManagerTargetResource extends Resource
         }
 
         // Only super_admin can edit
-        // @phpstan-ignore-next-line
-        return $user->hasRole('super_admin');
+        return $user->roles->where('name', 'super_admin')->count() > 0;
     }
 
     /**
@@ -111,8 +109,7 @@ class AccountManagerTargetResource extends Resource
         }
 
         // Only super_admin can delete
-        // @phpstan-ignore-next-line
-        return $user->hasRole('super_admin');
+        return $user->roles->where('name', 'super_admin')->count() > 0;
     }
 
     /**
@@ -128,9 +125,13 @@ class AccountManagerTargetResource extends Resource
         $user = Auth::user();
 
         // If user is Account Manager, only show their own targets
-        // @phpstan-ignore-next-line
-        if ($user && $user->hasRole('Account Manager') && !$user->hasRole('super_admin')) {
-            $query->where('user_id', $user->id);
+        if ($user) {
+            $isAccountManager = $user->roles->where('name', 'Account Manager')->count() > 0;
+            $isSuperAdmin = $user->roles->where('name', 'super_admin')->count() > 0;
+            
+            if ($isAccountManager && !$isSuperAdmin) {
+                $query->where('user_id', $user->id);
+            }
         }
 
         return $query;
@@ -165,7 +166,7 @@ class AccountManagerTargetResource extends Resource
                     ->options(function () {
                         $months = [];
                         for ($m = 1; $m <= 12; $m++) {
-                            $months[$m] = Carbon::create()->month($m)->format('F');
+                            $months[$m] = Carbon::createFromDate(null, $m, 1)->format('F');
                         }
                         return $months;
                     })
@@ -211,7 +212,7 @@ class AccountManagerTargetResource extends Resource
                 Tables\Columns\TextColumn::make('month_name')
                     ->label('Nama Bulan')
                     ->getStateUsing(function ($record) {
-                        return Carbon::create()->month($record->month)->format('F');
+                        return Carbon::createFromDate(null, $record->month, 1)->format('F');
                     }),
                 Tables\Columns\TextColumn::make('target_amount')
                     ->label('Target')
@@ -308,9 +309,13 @@ class AccountManagerTargetResource extends Resource
 
                         $user = Auth::user();
                         // If user is Account Manager (not super_admin), only show themselves
-                        // @phpstan-ignore-next-line
-                        if ($user && $user->hasRole('Account Manager') && !$user->hasRole('super_admin')) {
-                            $query->where('id', $user->id);
+                        if ($user) {
+                            $isAccountManager = $user->roles->where('name', 'Account Manager')->count() > 0;
+                            $isSuperAdmin = $user->roles->where('name', 'super_admin')->count() > 0;
+                            
+                            if ($isAccountManager && !$isSuperAdmin) {
+                                $query->where('id', $user->id);
+                            }
                         }
 
                         return $query;
@@ -337,7 +342,7 @@ class AccountManagerTargetResource extends Resource
                     ->options(function () {
                         $months = [];
                         for ($m = 1; $m <= 12; $m++) {
-                            $months[$m] = Carbon::create()->month($m)->format('F');
+                            $months[$m] = Carbon::createFromDate(null, $m, 1)->format('F');
                         }
                         return $months;
                     })
@@ -351,8 +356,7 @@ class AccountManagerTargetResource extends Resource
                         ->color('warning')
                         ->visible(function (): bool {
                             $user = Auth::user();
-                            // @phpstan-ignore-next-line
-                            return $user && $user->hasRole('super_admin');
+                            return $user && $user->roles->where('name', 'super_admin')->count() > 0;
                         })
                         ->form([
                             Forms\Components\TextInput::make('target_amount')
@@ -424,7 +428,7 @@ class AccountManagerTargetResource extends Resource
                         ->color('info')
                         ->modalHeading(fn (AccountManagerTarget $record) => 
                             'Order untuk ' . $record->user->name . ' - ' . 
-                            Carbon::create()->month($record->month)->format('F') . ' ' . $record->year
+                            Carbon::createFromDate(null, $record->month, 1)->format('F') . ' ' . $record->year
                         )
                         ->modalContent(function (AccountManagerTarget $record) {
                             $orders = Order::where('user_id', $record->user_id)
@@ -444,6 +448,125 @@ class AccountManagerTargetResource extends Resource
                         ->modalWidth('7xl')
                         ->modalCancelActionLabel('Tutup')
                         ->modalSubmitAction(false),
+
+                    Tables\Actions\Action::make('generate_report')
+                        ->label('Preview Report')
+                        ->icon('heroicon-o-document-text')
+                        ->color('info')
+                        ->visible(function (AccountManagerTarget $record) {
+                            $user = Auth::user();
+                            // Super admin dapat melihat semua report
+                            if ($user && $user->roles->where('name', 'super_admin')->count() > 0) {
+                                return true;
+                            }
+                            // User biasa hanya bisa melihat report mereka sendiri
+                            return $record->user_id === $user->id;
+                        })
+                        ->modalHeading(fn (AccountManagerTarget $record) => 
+                            'Preview Report - ' . $record->user->name . ' (' . 
+                            Carbon::createFromDate(null, $record->month, 1)->format('F') . ' ' . $record->year . ')'
+                        )
+                        ->modalContent(function (AccountManagerTarget $record) {
+                            $user = Auth::user();
+                            
+                            // Double check authorization
+                            $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+                            if (!$isSuperAdmin && $record->user_id !== $user->id) {
+                                return '<div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif;">
+                                    <div style="font-size: 18px; margin-bottom: 10px;">🚫 Akses Ditolak</div>
+                                    <div>Anda tidak memiliki akses untuk melihat report ini.</div>
+                                </div>';
+                            }
+                            // Get Account Manager user data
+                            $accountManager = User::with(['roles'])->find($record->user_id);
+                            
+                            // Get orders data for the period
+                            $orders = Order::where('user_id', $record->user_id)
+                                ->whereNotNull('closing_date')
+                                ->whereYear('closing_date', $record->year)
+                                ->whereMonth('closing_date', $record->month)
+                                ->with(['prospect'])
+                                ->get();
+
+                            // Calculate sales statistics
+                            $totalRevenue = $orders->sum('total_price');
+                            $totalOrders = $orders->count();
+                            $averageOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+                            
+                            // Get payroll data
+                            $payrollData = null;
+                            if (class_exists('\App\Models\Payroll')) {
+                                $payrollData = \App\Models\Payroll::where('user_id', $record->user_id)
+                                    ->where('period_year', $record->year)
+                                    ->where('period_month', $record->month)
+                                    ->first();
+                            }
+                            
+                            // Get leave data
+                            $leaveData = collect();
+                            if (class_exists('\App\Models\LeaveRequest')) {
+                                $leaveData = \App\Models\LeaveRequest::where('user_id', $record->user_id)
+                                    ->where(function($query) use ($record) {
+                                        $query->whereYear('start_date', $record->year)
+                                              ->whereMonth('start_date', $record->month);
+                                    })
+                                    ->orWhere(function($query) use ($record) {
+                                        $query->whereYear('end_date', $record->year)
+                                              ->whereMonth('end_date', $record->month);
+                                    })
+                                    ->with('leaveType')
+                                    ->get();
+                            }
+
+                            $achievementPercentage = $record->target_amount > 0 ? ($totalRevenue / $record->target_amount) * 100 : 0;
+
+                            return view('filament.components.account-manager-report-preview', [
+                                'accountManager' => $accountManager,
+                                'target' => $record,
+                                'orders' => $orders,
+                                'payrollData' => $payrollData,
+                                'leaveData' => $leaveData,
+                                'year' => $record->year,
+                                'month' => $record->month,
+                                'monthName' => Carbon::createFromDate(null, $record->month, 1)->format('F'),
+                                'totalRevenue' => $totalRevenue,
+                                'totalOrders' => $totalOrders,
+                                'averageOrderValue' => $averageOrderValue,
+                                'achievementPercentage' => $achievementPercentage
+                            ]);
+                        })
+                        ->modalWidth('7xl')
+                        ->modalActions([
+                            \Filament\Actions\Action::make('download')
+                                ->label('Download HTML')
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->color('success')
+                                ->action(function (AccountManagerTarget $record) {
+                                    $user = Auth::user();
+                                    $isSuperAdmin = $user && $user->roles->where('name', 'super_admin')->count() > 0;
+                                    
+                                    // Authorization check untuk download
+                                    if (!$isSuperAdmin && $record->user_id !== $user->id) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Akses Ditolak')
+                                            ->body('Anda tidak memiliki akses untuk mendownload report ini.')
+                                            ->danger()
+                                            ->send();
+                                        return;
+                                    }
+                                    
+                                    return redirect()->route('account-manager.report.html', [
+                                        'userId' => $record->user_id,
+                                        'year' => $record->year,
+                                        'month' => $record->month
+                                    ]);
+                                }),
+                            \Filament\Actions\Action::make('close')
+                                ->label('Tutup')
+                                ->color('gray')
+                                ->action(fn () => null),
+                        ])
+                        ->tooltip('Preview laporan sebelum download'),
                 ])
                     ->label('Actions')
                     ->icon('heroicon-o-cog-6-tooth')

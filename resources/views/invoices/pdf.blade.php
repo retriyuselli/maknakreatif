@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice #{{ $order->prospect->name_event }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         @page {
             size: a4 portrait;
@@ -13,9 +13,16 @@
             /* top, right, bottom, left */
         }
 
+        /* Universal Noto Sans Font Application */
+        *, 
+        *::before, 
+        *::after {
+            font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
+        }
+
         body {
             color: #000000;
-            font-family: 'Poppins', Arial, sans-serif;
+            font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             font-size: 18px;
             font-weight: 400;
             line-height: 1;
@@ -135,7 +142,7 @@
             color: #37474f;
             /* Dark grey-blue text */
             font-weight: bold;
-            /* Poppins Semibold */
+            /* Noto Sans Semibold */
             padding: 5px 5px;
             text-align: left;
             /* Header cells have a stronger bottom border and a right border */

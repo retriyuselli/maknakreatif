@@ -1,16 +1,16 @@
 @include ml {
-  :root {
-    --main-container : 850px;
-  }
+    :root {
+        --main-container: 850px;
+    }
 }
 
 .invoice-container {
-  &-wrap {
-    overflow: auto;
-  }
-  width: 880px;
-  padding: 20px 15px;
-  margin: 15px auto;
-  position: relative;
-  z-index: 5;
+    &-wrap {
+        overflow: auto;
+    }
+    width: 1204px;
+    padding: 20px 15px;
+    margin: 15px auto;
+    position: relative;
+    z-index: 5;
 }
