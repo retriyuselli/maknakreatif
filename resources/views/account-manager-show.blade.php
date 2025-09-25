@@ -179,11 +179,11 @@ Invoice Area
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <div>
                                     <span style="color: #666; font-size: 1rem;">Target: </span>
-                                    <span style="color: #4F7FFF; font-weight: bold; font-size: 1.2rem;">Rp {{ number_format($reportData['target']->target_amount ?? 0, 0, '.', '.') }}</span>
+                                    <span style="color: #4F7FFF; font-weight: bold; font-size: 1.2rem;"> {{ number_format($reportData['target']->target_amount ?? 0, 0, '.', '.') }}</span>
                                 </div>
                                 <div style="text-align: right;">
                                     <span style="color: #666; font-size: 1rem;">Achievement: </span>
-                                    <span style="color: #4F7FFF; font-weight: bold; font-size: 1.2rem;">Rp {{ number_format($reportData['totalRevenue'] ?? 0, 0, '.', '.') }}</span>
+                                    <span style="color: #4F7FFF; font-weight: bold; font-size: 1.2rem;"> {{ number_format($reportData['totalRevenue'] ?? 0, 0, '.', '.') }}</span>
                                 </div>
                             </div>
                             
@@ -209,7 +209,7 @@ Invoice Area
                                     <td><strong>Revenue</strong></td>
                                     <td> {{ number_format($reportData['target']->target_amount ?? 0, 0, ',', '.') }}</td>
                                     <td> {{ number_format($reportData['totalRevenue'] ?? 0, 0, ',', '.') }}</td>
-                                    <td>{{ number_format($reportData['achievementPercentage'] ?? 0, 1) }}%</td>
+                                    <td> {{ number_format($reportData['achievementPercentage'] ?? 0, 1) }}%</td>
                                     <td>
                                         @if(($reportData['achievementPercentage'] ?? 0) >= 100)
                                             <span style="color: green;">✓ Tercapai</span>
@@ -287,7 +287,7 @@ Invoice Area
                                         @endif
                                     </td>
                                     <td>{{ \Carbon\Carbon::parse($order->created_at)->format('d/m/Y') }}</td>
-                                    <td> {{ number_format($order->grand_total ?? 0, 0, ',', '.') }}</td>
+                                    <td style="text-align: right;"> {{ number_format($order->grand_total ?? 0, 0, ',', '.') }}</td>
                                     <td>
                                         @if($order->status == 'confirmed' || (is_object($order->status) && $order->status->value == 'confirmed'))
                                             <span style="color: green;">✓ Confirmed</span>
@@ -330,52 +330,63 @@ Invoice Area
                                     ];
                                     
                                     $currentMonth = (int) date('n');
-                                    $targetAmount = $reportData['target']->target_amount ?? 1000000000;
+                                    $fixedTargetAmount = 1000000000; // Target tetap tidak berubah
                                     
-                                    $yearlyData = [];
+                                    // Get user ID for actual data queries
+                                    $userId = $accountManager->id ?? 1;
+                                    
+                                    // Query data aktual untuk setiap bulan dari database
+                                    $actualYearlyData = [];
+                                    
+                                    for($month = 1; $month <= 12; $month++) {
+                                        if($month <= $currentMonth) {
+                                            // Query orders menggunakan kriteria yang sama dengan AccountManagerTargetResource
+                                            // Menggunakan closing_date dan total_price sesuai dengan sistem yang ada
+                                            $monthlyOrders = \App\Models\Order::where('user_id', $userId)
+                                                ->whereNotNull('closing_date')
+                                                ->whereYear('closing_date', $year)
+                                                ->whereMonth('closing_date', $month)
+                                                ->get();
+                                                
+                                            // Hitung total revenue menggunakan total_price (sesuai AccountManagerTarget)
+                                            $monthlyRevenue = $monthlyOrders->sum('total_price') ?? 0;
+                                            $monthlyOrderCount = $monthlyOrders->count();
+                                            
+                                        } else {
+                                            // Bulan yang belum terjadi
+                                            $monthlyRevenue = 0;
+                                            $monthlyOrderCount = 0;
+                                        }
+                                        
+                                        $actualYearlyData[$month] = [
+                                            'name' => $months[$month],
+                                            'orders' => $monthlyOrderCount,
+                                            'revenue' => $monthlyRevenue,
+                                            'target' => $fixedTargetAmount
+                                        ];
+                                    }
+                                    
+                                    // Gunakan data aktual
+                                    $fixedYearlyData = $actualYearlyData;
+                                    
                                     $totalYearlyOrders = 0;
                                     $totalYearlyRevenue = 0;
                                     $totalYearlyTarget = 0;
                                     
-                                    // Generate data untuk setiap bulan
-                                    for($month = 1; $month <= 12; $month++) {
-                                        if($month <= $currentMonth) {
-                                            // Bulan yang sudah lewat - gunakan data simulasi berdasarkan pola
-                                            if($month == $currentMonth) {
-                                                // Bulan ini - gunakan data aktual
-                                                $orders = $reportData['totalOrders'] ?? 0;
-                                                $revenue = $reportData['totalRevenue'] ?? 0;
-                                            } else {
-                                                // Bulan sebelumnya - simulasi data dengan variasi
-                                                $multiplier = rand(50, 150) / 100; // Variasi 50%-150%
-                                                $orders = max(0, round(($reportData['totalOrders'] ?? 0) * $multiplier));
-                                                $revenue = max(0, round(($reportData['totalRevenue'] ?? 0) * $multiplier));
-                                            }
-                                        } else {
-                                            // Bulan yang belum terjadi
-                                            $orders = 0;
-                                            $revenue = 0;
-                                        }
-                                        
-                                        $achievement = $targetAmount > 0 ? ($revenue / $targetAmount) * 100 : 0;
-                                        
-                                        $yearlyData[$month] = [
-                                            'name' => $months[$month],
-                                            'orders' => $orders,
-                                            'revenue' => $revenue,
-                                            'target' => $targetAmount,
-                                            'achievement' => $achievement
-                                        ];
-                                        
-                                        if($month <= $currentMonth) {
-                                            $totalYearlyOrders += $orders;
-                                            $totalYearlyRevenue += $revenue;
-                                            $totalYearlyTarget += $targetAmount;
-                                        }
+                                    // Hitung total hanya sampai bulan berjalan
+                                    for($month = 1; $month <= $currentMonth; $month++) {
+                                        $totalYearlyOrders += $fixedYearlyData[$month]['orders'];
+                                        $totalYearlyRevenue += $fixedYearlyData[$month]['revenue'];
+                                        $totalYearlyTarget += $fixedYearlyData[$month]['target'];
+                                    }
+                                    
+                                    // Calculate achievement for each month
+                                    foreach($fixedYearlyData as $key => $data) {
+                                        $fixedYearlyData[$key]['achievement'] = $data['target'] > 0 ? ($data['revenue'] / $data['target']) * 100 : 0;
                                     }
                                 @endphp
                                 
-                                @foreach($yearlyData as $month => $data)
+                                @foreach($fixedYearlyData as $month => $data)
                                     @if($month <= $currentMonth)
                                     <tr>
                                         <td>
@@ -415,7 +426,7 @@ Invoice Area
                                         @if($yearlyAchievement >= 100)
                                             <span style="color: #90EE90;">✓ TERCAPAI</span>
                                         @elseif($yearlyAchievement >= 75)
-                                            <span style="color: #FFD700;;">⚠ HAMPIR TERCAPAI</span>
+                                            <span style="color: #FFD700;">⚠ HAMPIR TERCAPAI</span>
                                         @else
                                             <span style="color: #c40623;">✗ BELUM TERCAPAI</span>
                                         @endif
@@ -436,7 +447,7 @@ Invoice Area
                                 <strong> {{ number_format($projectedYearlyRevenue, 0, ',', '.') }}</strong>
                             </p>
                             <p style="color: white; margin: 5px 0 0 0; font-size: 0.9em;">
-                                @if($projectedYearlyRevenue >= ($targetAmount * 12))
+                                @if($projectedYearlyRevenue >= ($fixedTargetAmount * 12))
                                     🎯 Proyeksi menunjukkan target tahunan akan tercapai!
                                 @else
                                     💪 Butuh akselerasi untuk mencapai target tahunan!
