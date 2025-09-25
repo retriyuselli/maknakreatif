@@ -9,7 +9,7 @@
     <style>
         @page {
             size: a4 portrait;
-            margin: 1cm 1.5cm 3cm 2cm;
+            margin: 0.5cm 1cm 1.5cm 1cm;
             /* top, right, bottom, left */
         }
 
@@ -25,12 +25,10 @@
             font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             font-size: 18px;
             font-weight: 400;
-            line-height: 1;
+            line-height: 1.2;
             margin: 0;
             font-smoothing: antialiased;
             padding: 0;
-            line-height: 1.4;
-            /* atau pertimbangkan 1.5 */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             max-width: 100%;
@@ -39,9 +37,20 @@
         /* Header */
         .header {
             border-bottom: 1px solid #ddd;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
             text-align: center;
+        }
+        
+        /* Header Company Info - Rapatkan jarak */
+        .header h2 {
+            margin: 0 0 2px 0;
+            line-height: 1.1;
+        }
+        
+        .header td {
+            line-height: 1.2;
+            padding: 0;
         }
 
         .header img {
@@ -53,24 +62,24 @@
         .header h2 {
             font-size: 16px;
             font-weight: bold;
-            margin: 1px 0;
+            margin: 0;
         }
 
         .header p {
             font-size: 16px;
-            margin: 1px 0;
+            margin: 0;
         }
 
         /* Table Base */
         table {
             border-collapse: collapse;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
             width: 100%;
         }
 
         th,
         td {
-            padding: 8px;
+            padding: 4px 6px;
             text-align: left;
             vertical-align: top;
         }
@@ -87,7 +96,7 @@
 
         /* Invoice Title */
         .invoice-title {
-            margin: 10px 0;
+            margin: 5px 0;
             text-align: center;
         }
 
@@ -100,13 +109,13 @@
         .invoice-title h4 {
             font-size: 16px;
             font-weight: normal;
-            margin-top: 1px;
+            margin-top: 0;
         }
 
         /* Invoice Details */
         .invoice-details td {
             border: none;
-            padding: 20px 0;
+            padding: 10px 0;
             vertical-align: top;
             width: 50%;
         }
@@ -143,7 +152,7 @@
             /* Dark grey-blue text */
             font-weight: bold;
             /* Noto Sans Semibold */
-            padding: 5px 5px;
+            padding: 3px 4px;
             text-align: left;
             /* Header cells have a stronger bottom border and a right border */
             border-bottom: 1px solid #90a4ae;
@@ -162,7 +171,7 @@
         }
 
         .items-table tbody td {
-            padding: 10px 10px;
+            padding: 5px 6px;
             /* Body cells have a lighter bottom border and a right border */
             border-bottom: 1px solid #cfd8dc;
             /* Light horizontal separator for rows */
@@ -201,7 +210,7 @@
         /* Totals Table */
         .total-table {
             margin-left: 50%;
-            margin-top: 20px;
+            margin-top: 10px;
             width: 50%;
         }
 
@@ -215,7 +224,7 @@
 
         /* Payment History */
         .payment-history {
-            margin-top: 20px;
+            margin-top: 10px;
         }
 
         /* Warning Box */
@@ -224,8 +233,8 @@
             border: 1px solid #f5c6cb;
             border-radius: 4px;
             color: #721c24;
-            margin: 20px 0;
-            padding: 15px;
+            margin: 10px 0;
+            padding: 10px;
         }
 
         /* Footer */
@@ -268,7 +277,7 @@
             color: #000000;
             font-size: 16px;
             line-height: 1;
-            margin-top: 2px;
+            margin-top: 0;
             white-space: normal;
         }
 
@@ -276,14 +285,14 @@
             color: #000000;
             font-size: 16px;
             line-height: 1;
-            margin-top: 2px;
+            margin-top: 0;
             white-space: normal;
         }
 
         hr {
             border: none;
             border-top: 1px solid #ddd;
-            margin: 10px 0;
+            margin: 5px 0;
         }
 
         /* Badge Simulation */
@@ -367,13 +376,15 @@
     <!-- Header -->
     <table class="header" style="width: 100%;">
         <tr>
-            <td style="width: 60%; text-align: left; vertical-align: top;">
-                <h2>{{ config('app.name', 'Your Company') }}</h2>
-                <p>{{ config('invoice.address', 'Your Company Address') }}</p>
-                <p>Phone : {{ config('invoice.phone', '+123456789') }}</p>
-                <p>Email : {{ config('invoice.email', 'info@yourcompany.com') }}</p>
+            <td style="line-height: 1;">
+                <div>
+                    <b>PT. Makna Kreatif Indonesia</b><br>
+                    Alamat : Jln. Sintraman Jaya, No. 2148, Sekip Jaya, Palembang<br>
+                    No. Tlp : +62 822-9796-2600<br>
+                    Email : maknawedding@gmail.com
+                </div>
             </td>
-            <td style="width: 40%; text-align: right; vertical-align: middle;">
+            <td style="width: 60%; height: auto; text-align: right; vertical-align: middle;">
                 {{-- Embed image using Base64 for reliable PDF rendering --}}
                 @php
                     $logoPath = public_path(config('invoice.logo', 'images/logo.png'));
@@ -521,7 +532,7 @@
                                 {{ $itemPengurangan->description ?? 'N/A' }}
                                 @if ($itemPengurangan->notes)
                                     <div style="font-size: 18px; margin-left: 30px; color: #555; margin-top: 0px;">
-                                        <i>{!! strip_tags($itemPengurangan->notes, '<li><strong><em><ul><li><br><span><div>') !!}
+                                        <i>{!! strip_tags($itemPengurangan->notes, '<li><strong><ul><li><br><span><div>') !!}
                                     </div>
                                 @endif
                             </td>
@@ -542,9 +553,9 @@
                 <thead>
                     <tr style="background-color: #f8f9fa;">
                         <th>Date</th>
-                        <th>Amount</th>
+                        <th style="text-align: right;">Amount</th>
                         <th>Payment Method</th>
-                        <th>Notes</th>
+                        <th style="text-align: center;">Notes</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -553,7 +564,7 @@
                             <td>{{ \Carbon\Carbon::parse($payment->tgl_bayar)->format('d F Y') }}</td>
                             <td class="text-right">Rp {{ number_format($payment->nominal, 0, ',', '.') }}</td>
                             <td>{{ $payment->paymentMethod->name ?? 'N/A' }}</td>
-                            <td>{{ $payment->keterangan }}</td>
+                            <td style="text-align: center;">{{ $payment->keterangan }}</td>
                         </tr>
                     @endforeach
                 </tbody>
