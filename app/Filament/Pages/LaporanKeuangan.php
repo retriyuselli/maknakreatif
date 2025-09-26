@@ -27,7 +27,8 @@ class LaporanKeuangan extends Page
     public $tanggal_akhir;
     public $total_masuk = 0;
     public $total_keluar = 0;
-    public $filter_jenis = '';
+    public $filter_jenis = [];
+    public $filter_status = [];
     public $filter_keyword = '';
 
     public function mount()
@@ -189,11 +190,28 @@ class LaporanKeuangan extends Page
     public function filter()
     {
         $transaksi = $this->getTransaksiGabungan();
+        
 
-        // Filter jenis transaksi
-        if ($this->filter_jenis && $this->filter_jenis !== 'semua') {
+
+        // Filter jenis transaksi (mendukung multiple selection)
+        if (!empty($this->filter_jenis)) {
             $transaksi = $transaksi->filter(function ($item) {
-                return $item->jenis === $this->filter_jenis;
+                return in_array($item->jenis, $this->filter_jenis);
+            });
+        }
+
+        // Filter status khusus untuk transaksi Wedding
+        if (!empty($this->filter_status)) {
+            $transaksi = $transaksi->filter(function ($item) {
+                // Hanya filter status untuk transaksi Wedding
+                if (str_contains($item->jenis, 'Wedding') && isset($item->order_id)) {
+                    $orderStatus = $this->getOrderStatus($item->order_id);
+
+                    return $orderStatus && in_array($orderStatus, $this->filter_status);
+                }
+                
+                // Untuk transaksi non-Wedding, tidak ada filter status
+                return true;
             });
         }
 
@@ -226,7 +244,8 @@ class LaporanKeuangan extends Page
 
     public function resetFilters()
     {
-        $this->filter_jenis = '';
+        $this->filter_jenis = [];
+        $this->filter_status = [];
         $this->filter_keyword = '';
         $this->tanggal_awal = now()->startOfMonth()->toDateString();
         $this->tanggal_akhir = now()->endOfMonth()->toDateString();
@@ -308,16 +327,16 @@ class LaporanKeuangan extends Page
         // Set parameter dari request
         $instance->tanggal_awal = $request->get('tanggal_awal', now()->startOfMonth()->toDateString());
         $instance->tanggal_akhir = $request->get('tanggal_akhir', now()->endOfMonth()->toDateString());
-        $instance->filter_jenis = $request->get('filter_jenis', '');
+        $instance->filter_jenis = $request->get('filter_jenis', []);
         $instance->filter_keyword = $request->get('filter_keyword', '');
 
         // Dapatkan data berdasarkan filter yang sedang aktif
         $transaksi = $instance->getTransaksiGabungan();
 
-        // Filter jenis transaksi
-        if ($instance->filter_jenis && $instance->filter_jenis !== 'semua') {
+        // Filter jenis transaksi (mendukung multiple selection)
+        if (!empty($instance->filter_jenis)) {
             $transaksi = $transaksi->filter(function ($item) use ($instance) {
-                return $item->jenis === $instance->filter_jenis;
+                return in_array($item->jenis, $instance->filter_jenis);
             });
         }
 
@@ -453,5 +472,13 @@ class LaporanKeuangan extends Page
                 'message' => 'Terjadi kesalahan saat membuat PDF. Silakan coba lagi.'
             ], 500);
         }
+    }
+
+    protected function getOrderStatus($orderId)
+    {
+        if (!$orderId) return null;
+        
+        $order = \App\Models\Order::find($orderId);
+        return $order && $order->status ? $order->status->value : null;
     }
 }
