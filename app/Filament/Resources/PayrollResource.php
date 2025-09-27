@@ -101,7 +101,10 @@ class PayrollResource extends Resource
                                 Forms\Components\Select::make('user_id')
                                     ->label('Karyawan')
                                     ->relationship('user', 'name', function (Builder $query) {
-                                        return $query->with('status');
+                                        return $query->with('status')
+                                            ->whereHas('roles', function (Builder $query) {
+                                                $query->where('name', 'Office');
+                                            });
                                     })
                                     ->searchable()
                                     ->preload()
@@ -112,7 +115,7 @@ class PayrollResource extends Resource
                                         $email = $record->email ? " - {$record->email}" : '';
                                         return "{$record->name} ({$statusName}){$email}";
                                     })
-                                    ->helperText('Pilih karyawan yang akan dibuatkan payroll')
+                                    ->helperText('Pilih karyawan dengan role Office yang akan dibuatkan payroll')
                                     ->columnSpan(2),
                                 
                                 Forms\Components\Group::make([
