@@ -241,7 +241,6 @@ class NotaDinasDetailResource extends Resource
                         'Additional' => 'Additional'
                     ])
                     ->default('DP')
-                    ->visible(fn (Forms\Get $get): bool => $get('jenis_pengeluaran') === PengeluaranJenis::WEDDING->value)
                     ->live(),
                 Forms\Components\Select::make('order_id')
                     ->label('Event (Order)')
@@ -380,8 +379,15 @@ class NotaDinasDetailResource extends Resource
                 Tables\Columns\TextColumn::make('payment_stage')
                     ->label('Tahap')
                     ->badge()
-                    ->color('warning')
-                    ->visible(fn (?\App\Models\NotaDinasDetail $record): bool => $record?->jenis_pengeluaran === 'wedding')
+                    ->color(fn (string $state): string => match ($state) {
+                        'DP' => 'warning',
+                        'Payment 1' => 'info',
+                        'Payment 2' => 'info',
+                        'Payment 3' => 'info',
+                        'Final Payment' => 'success',
+                        'Additional' => 'gray',
+                        default => 'primary',
+                    })
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('event_display')
                     ->label('Event')
