@@ -409,7 +409,7 @@ class LaporanKeuangan extends Page
             $pdf->setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isPhpEnabled' => true,
-                'defaultFont' => 'Poppins',
+                'defaultFont' => 'Noto Sans',
                 'isRemoteEnabled' => true,
                 'chroot' => public_path(),
                 'dpi' => 72, // Turunkan DPI untuk performa lebih baik
@@ -444,7 +444,7 @@ class LaporanKeuangan extends Page
                     $pdf->setOptions([
                         'isHtml5ParserEnabled' => true,
                         'isPhpEnabled' => true,
-                        'defaultFont' => 'Poppins',
+                        'defaultFont' => 'Noto Sans',
                         'dpi' => 72,
                     ]);
                     

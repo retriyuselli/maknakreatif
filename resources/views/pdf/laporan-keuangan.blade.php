@@ -6,17 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan Keuangan</title>
     <style>
-        /* Laporan Keuangan PDF Styles - Portrait Format */
+        /* Laporan Keuangan PDF Styles - Landscape Format */
 
-        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap");
 
         @page {
-            size: A4 portrait;
+            size: A4 landscape;
             margin: 0.5in;
         }
 
         body {
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
             font-size: 11px;
             margin: 0;
             padding: 5px;
@@ -37,7 +37,7 @@
             color: #007bff;
             font-size: 20px;
             font-weight: 700;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
         }
 
         .header p {
@@ -63,7 +63,7 @@
             font-size: 11px;
             width: 100%;
             font-weight: 600;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
         }
 
         .filter-row {
@@ -82,7 +82,7 @@
         .filter-item strong {
             color: #495057;
             font-weight: 600;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
         }
 
         /* Flexbox Summary Layout - 4 Column Horizontal (PDF Compatible) */
@@ -152,7 +152,7 @@
             font-size: 7px;
             color: #374151;
             font-weight: 600;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
             text-transform: uppercase;
             letter-spacing: 0.3px;
             flex: 1;
@@ -166,7 +166,7 @@
         .summary-value .amount {
             font-size: 10px;
             font-weight: 700;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
             margin-bottom: 1px;
             line-height: 1.1;
         }
@@ -190,7 +190,7 @@
         .summary-value .description {
             font-size: 6px;
             font-weight: 500;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.2px;
@@ -212,15 +212,15 @@
             table-layout: fixed;
         }
 
-        /* Lebar kolom yang disesuaikan untuk 8 kolom */
-        th:nth-child(1), td:nth-child(1) { width: 12%; } /* Tanggal */
-        th:nth-child(2), td:nth-child(2) { width: 12%; } /* Jenis */
-        th:nth-child(3), td:nth-child(3) { width: 18%; } /* Deskripsi */
+        /* Lebar kolom yang disesuaikan untuk landscape format - 8 kolom */
+        th:nth-child(1), td:nth-child(1) { width: 10%; } /* Tanggal */
+        th:nth-child(2), td:nth-child(2) { width: 10%; } /* Jenis */
+        th:nth-child(3), td:nth-child(3) { width: 20%; } /* Deskripsi */
         th:nth-child(4), td:nth-child(4) { width: 12%; } /* Vendor */
-        th:nth-child(5), td:nth-child(5) { width: 15%; } /* Prospect/Event */
-        th:nth-child(6), td:nth-child(6) { width: 13%; } /* Rekening */
-        th:nth-child(7), td:nth-child(7) { width: 9%; }  /* Jumlah */
-        th:nth-child(8), td:nth-child(8) { width: 9%; }  /* Saldo */
+        th:nth-child(5), td:nth-child(5) { width: 18%; } /* Prospect/Event */
+        th:nth-child(6), td:nth-child(6) { width: 15%; } /* Rekening */
+        th:nth-child(7), td:nth-child(7) { width: 8%; }  /* Jumlah */
+        th:nth-child(8), td:nth-child(8) { width: 7%; }  /* Saldo */
 
         th,
         td {
@@ -237,7 +237,7 @@
             font-weight: 600;
             color: #495057;
             font-size: 9px;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
         }
 
         td {
@@ -260,7 +260,7 @@
             text-align: center;
             display: inline-block;
             min-width: 55px;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: "Noto Sans", Arial, sans-serif;
         }
 
         .badge-masuk {
@@ -334,7 +334,7 @@
 
 <body>
     <div class="header">
-        <h1>LAPORAN KEUANGAN</h1>
+        <h1>LAPORAN KEUANGAN 111</h1>
         <p>Periode: {{ \Carbon\Carbon::parse($tanggal_awal)->format('d F Y') }} -
             {{ \Carbon\Carbon::parse($tanggal_akhir)->format('d F Y') }}</p>
         <p>Digenerate pada: {{ $generated_at }}</p>
