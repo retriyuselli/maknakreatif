@@ -14,6 +14,7 @@ class PendapatanLain extends Model
 
     protected $fillable = [
         'name',
+        'vendor_id',
         'payment_method_id',
         'nominal',
         'image',
@@ -31,5 +32,10 @@ class PendapatanLain extends Model
     public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethod::class);
+    }
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
     }
 }

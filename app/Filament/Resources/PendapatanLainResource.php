@@ -40,6 +40,19 @@ class PendapatanLainResource extends Resource
                                     ->maxLength(255)    
                                     ->columnSpanFull(),
 
+                                Forms\Components\Select::make('vendor_id')
+                                    ->relationship('vendor', 'name')
+                                    ->options(function () {
+                                        return \App\Models\Vendor::where('status', 'vendor')
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->label('Vendor')
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->columnSpanFull()
+                                    ->helperText('Pilih vendor jika pendapatan berasal dari vendor tertentu'),
+
                                 Forms\Components\Select::make('payment_method_id')
                                     ->relationship('paymentMethod', 'name')
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->is_cash ? 'Kas/Tunai' : ($record->bank_name ? "{$record->bank_name} - {$record->no_rekening}" : $record->name))
@@ -114,6 +127,15 @@ class PendapatanLainResource extends Resource
                     ->wrap()
                     ->description(fn (PendapatanLain $record): ?string => Str::limit($record->keterangan, 50)),
 
+                Tables\Columns\TextColumn::make('vendor.name')
+                    ->label('Vendor')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('primary')
+                    ->placeholder('Tidak ada vendor')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('nominal')
                     ->label('Jumlah')
                     ->numeric()
@@ -161,6 +183,17 @@ class PendapatanLainResource extends Resource
                 Tables\Filters\SelectFilter::make('payment_method_id')
                     ->label('Metode Pembayaran')
                     ->relationship('paymentMethod', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->multiple(),
+                
+                Tables\Filters\SelectFilter::make('vendor_id')
+                    ->label('Vendor')
+                    ->relationship('vendor', 'name')
+                    ->options(function () {
+                        return \App\Models\Vendor::where('status', 'vendor')
+                            ->pluck('name', 'id');
+                    })
                     ->searchable()
                     ->preload()
                     ->multiple(),

@@ -213,14 +213,14 @@
         }
 
         /* Lebar kolom yang disesuaikan untuk landscape format - 8 kolom */
-        th:nth-child(1), td:nth-child(1) { width: 10%; } /* Tanggal */
+        th:nth-child(1), td:nth-child(1) { width: 8%; min-width: 75px; } /* Tanggal - fix untuk format dd/mm/yyyy */
         th:nth-child(2), td:nth-child(2) { width: 10%; } /* Jenis */
-        th:nth-child(3), td:nth-child(3) { width: 20%; } /* Deskripsi */
-        th:nth-child(4), td:nth-child(4) { width: 12%; } /* Vendor */
-        th:nth-child(5), td:nth-child(5) { width: 18%; } /* Prospect/Event */
-        th:nth-child(6), td:nth-child(6) { width: 15%; } /* Rekening */
-        th:nth-child(7), td:nth-child(7) { width: 8%; }  /* Jumlah */
-        th:nth-child(8), td:nth-child(8) { width: 7%; }  /* Saldo */
+        th:nth-child(3), td:nth-child(3) { width: 18%; } /* Deskripsi */
+        th:nth-child(4), td:nth-child(4) { width: 11%; } /* Vendor */
+        th:nth-child(5), td:nth-child(5) { width: 16%; } /* Prospect/Event */
+        th:nth-child(6), td:nth-child(6) { width: 13%; } /* Rekening */
+        th:nth-child(7), td:nth-child(7) { width: 12%; min-width: 95px; }  /* Jumlah - fix untuk nominal panjang */
+        th:nth-child(8), td:nth-child(8) { width: 12%; min-width: 95px; }  /* Saldo - fix untuk nominal panjang */
 
         th,
         td {
@@ -242,6 +242,29 @@
 
         td {
             font-size: 8px;
+        }
+
+        /* CSS khusus untuk kolom tanggal */
+        th:nth-child(1), td:nth-child(1) {
+            white-space: nowrap;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* CSS khusus untuk kolom Jumlah dan Saldo */
+        th:nth-child(7), td:nth-child(7) {
+            white-space: nowrap;
+            text-align: right;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* CSS khusus untuk kolom Saldo - menggunakan Noto Sans */
+        th:nth-child(8), td:nth-child(8) {
+            white-space: nowrap;
+            text-align: right;
+            font-weight: 500;
+            font-family: "Noto Sans", Arial, sans-serif;
         }
 
         .text-right {
@@ -334,7 +357,7 @@
 
 <body>
     <div class="header">
-        <h1>LAPORAN KEUANGAN 111</h1>
+        <h1>LAPORAN KEUANGAN</h1>
         <p>Periode: {{ \Carbon\Carbon::parse($tanggal_awal)->format('d F Y') }} -
             {{ \Carbon\Carbon::parse($tanggal_akhir)->format('d F Y') }}</p>
         <p>Digenerate pada: {{ $generated_at }}</p>
@@ -407,7 +430,7 @@
     <table>
         <thead>
             <tr>
-                <th>Tanggal</th>
+                <th class="text-center">Tanggal</th>
                 <th>Jenis</th>
                 <th>Deskripsi</th>
                 <th>Vendor</th>

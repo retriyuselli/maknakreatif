@@ -66,7 +66,7 @@ class NotaDinas extends Model
         }
 
         // Validasi kategori
-        $validKategori = ['BIS', 'OPS', 'ADM'];
+        $validKategori = ['BIS', 'OPS', 'LAIN'];
         if (!in_array(strtoupper($kategori), $validKategori)) {
             $kategori = 'BIS'; // default
         }
@@ -103,7 +103,7 @@ class NotaDinas extends Model
         return [
             'BIS' => 'Bisnis',
             'OPS' => 'Operasional', 
-            'ADM' => 'Administrasi'
+            'LAIN' => 'Lain-lain'
         ];
     }
 
