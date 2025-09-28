@@ -1058,14 +1058,14 @@ h6 {
 
 .invoice-table th {
     padding: 5px 20px;
-    border: 1px solid var(--border-color);
+    border: 0px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     text-transform: uppercase;
 }
 
 .invoice-table td {
     padding: 5px 20px;
-    border: 1px solid var(--border-color);
+    border: 0px solid var(--border-color);
     /* border-radius: 10px; */
     border-bottom: 1px solid var(--border-color);
 }

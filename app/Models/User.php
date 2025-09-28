@@ -50,6 +50,13 @@ class User extends Authenticatable implements HasAvatar
         
         // Avatar - Allowed for file upload
         'avatar_url',
+        
+        // Documents & Notes - Allowed for upload and notes
+        'contract_document',
+        'identity_document', 
+        'additional_documents',
+        'notes',
+        'emergency_contact',
     ];
 
     /**
@@ -109,6 +116,7 @@ class User extends Authenticatable implements HasAvatar
             'date_of_birth' => 'date',
             'hire_date' => 'date',
             'last_working_date' => 'date',
+            'additional_documents' => 'array',
         ];
     }
 

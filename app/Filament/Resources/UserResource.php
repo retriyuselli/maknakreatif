@@ -75,72 +75,70 @@ class UserResource extends Resource
     {
         return $form
             ->schema([
-                // Basic Information Section
-                Forms\Components\Section::make('Informasi Dasar')
-                    ->description('Informasi dasar akun pengguna')
-                    ->schema([
-                        Forms\Components\Group::make()
+                Forms\Components\Tabs::make('User Information')
+                    ->tabs([
+                        Forms\Components\Tabs\Tab::make('Basic Information')
+                            ->icon('heroicon-o-user')
                             ->schema([
-                                Forms\Components\Grid::make(2)
+                                Forms\Components\Section::make('Account Details')
                                     ->schema([
-                                        Forms\Components\TextInput::make('name')
-                                            ->label('Nama Lengkap')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->autocomplete('name')
-                                            ->placeholder('Masukkan nama lengkap'),
-                                        
-                                        Forms\Components\TextInput::make('email')
-                                            ->label('Email')
-                                            ->email()
-                                            ->required()
-                                            ->unique(ignoreRecord: true)
-                                            ->maxLength(255)
-                                            ->autocomplete('email')
-                                            ->placeholder('user@example.com'),
-                                    ]),
-                            ]),
-                        
-                        Forms\Components\Group::make()
-                            ->schema([
-                                Forms\Components\Grid::make(2)
-                                    ->schema([
-                                        Forms\Components\Select::make('roles')
-                                            ->label('Role')
-                                            ->relationship('roles', 'name')
-                                            ->multiple()
-                                            ->preload()
-                                            ->searchable()
-                                            ->placeholder('Pilih Role')
-                                            ->maxItems(5)
-                                            ->helperText('Pilih satu atau lebih role untuk pengguna (maksimal 5 role)')
-                                            ->createOptionForm([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
                                                 Forms\Components\TextInput::make('name')
-                                                    ->label('Nama Role')
+                                                    ->label('Nama Lengkap')
                                                     ->required()
-                                                    ->unique('roles', 'name'),
-                                            ])
-                                            ->createOptionUsing(function (array $data) {
-                                                return \Spatie\Permission\Models\Role::create($data)->getKey();
-                                            }),
-                                        
-                                        Forms\Components\Select::make('status_id')
-                                            ->label('Status Jabatan')
-                                            ->relationship('status', 'status_name')
-                                            ->required()
-                                            ->preload()
-                                            ->searchable()
-                                            ->native(false)
-                                            // ->id('status_jabatan_select')
-                                            ->selectablePlaceholder(false)
-                                            ->placeholder('Pilih Status Jabatan')
-                                            ->helperText('Status jabatan pengguna (Admin, Finance, HRD, dll)'),
+                                                    ->maxLength(255)
+                                                    ->autocomplete('name')
+                                                    ->placeholder('Masukkan nama lengkap'),
+                                                
+                                                Forms\Components\TextInput::make('email')
+                                                    ->label('Email')
+                                                    ->email()
+                                                    ->required()
+                                                    ->unique(ignoreRecord: true)
+                                                    ->maxLength(255)
+                                                    ->autocomplete('email')
+                                                    ->placeholder('user@example.com'),
+                                            ]),
                                     ]),
-                            ]),
-                        
-                        Forms\Components\Group::make()
-                            ->schema([
-                                Forms\Components\Grid::make(2)
+                                
+                                Forms\Components\Section::make('Role & Status')
+                                    ->schema([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\Select::make('roles')
+                                                    ->label('Role')
+                                                    ->relationship('roles', 'name')
+                                                    ->multiple()
+                                                    ->preload()
+                                                    ->searchable()
+                                                    ->placeholder('Pilih Role')
+                                                    ->maxItems(5)
+                                                    ->helperText('Pilih satu atau lebih role untuk pengguna (maksimal 5 role)')
+                                                    ->createOptionForm([
+                                                        Forms\Components\TextInput::make('name')
+                                                            ->label('Nama Role')
+                                                            ->required()
+                                                            ->unique('roles', 'name'),
+                                                    ])
+                                                    ->createOptionUsing(function (array $data) {
+                                                        return \Spatie\Permission\Models\Role::create($data)->getKey();
+                                                    }),
+                                                
+                                                Forms\Components\Select::make('status_id')
+                                                    ->label('Status Jabatan')
+                                                    ->relationship('status', 'status_name')
+                                                    ->required()
+                                                    ->preload()
+                                                    ->searchable()
+                                                    ->native(false)
+                                                    ->selectablePlaceholder(false)
+                                                    ->placeholder('Pilih Status Jabatan')
+                                                    ->helperText('Status jabatan pengguna (Admin, Finance, HRD, dll)'),
+                                            ]),
+                                    ]),
+                                
+                                Forms\Components\Section::make('Security')
                                     ->schema([
                                         Forms\Components\TextInput::make('password')
                                             ->label('Password')
@@ -154,126 +152,179 @@ class UserResource extends Resource
                                             ->columnSpan(2),
                                     ]),
                             ]),
-                    ]),
-
-                // Personal Information Section
-                Forms\Components\Section::make('Informasi Personal')
-                    ->description('Informasi personal dan kontak')
-                    ->schema([
-                        Forms\Components\Grid::make(2)
+                            
+                        Forms\Components\Tabs\Tab::make('Personal & Employment')
+                            ->icon('heroicon-o-briefcase')
                             ->schema([
-                                Forms\Components\TextInput::make('phone_number')
-                                    ->label('Nomor Telepon')
-                                    ->tel()
-                                    ->maxLength(255)
-                                    ->placeholder('08xx-xxxx-xxxx'),
-                                
-                                Forms\Components\DatePicker::make('date_of_birth')
-                                    ->label('Tanggal Lahir')
-                                    ->displayFormat('d/m/Y')
-                                    ->maxDate(now()->subYears(17)), // Minimal 17 tahun
-                            ]),
-                        
-                        Forms\Components\Textarea::make('address')
-                            ->label('Alamat')
-                            ->maxLength(500)
-                            ->rows(3)
-                            ->placeholder('Alamat lengkap'),
-                        
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\Select::make('gender')
-                                    ->label('Jenis Kelamin')
-                                    ->options([
-                                        'male' => 'Laki-laki',
-                                        'female' => 'Perempuan',
-                                    ])
-                                    ->placeholder('Pilih jenis kelamin'),
-                                
-                                Forms\Components\Select::make('department')
-                                    ->label('Departemen')
-                                    ->options([
-                                        'bisnis' => 'Bisnis',
-                                        'operasional' => 'Operasional',
-                                    ])
-                                    ->default('operasional')
-                                    ->required(),
-                            ]),
-                    ]),
-
-                // Employment Information Section
-                Forms\Components\Section::make('Informasi Pekerjaan')
-                    ->description('Informasi terkait pekerjaan dan masa kerja')
-                    ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\DatePicker::make('hire_date')
-                                    ->label('Tanggal Mulai Kerja')
-                                    ->displayFormat('d/m/Y')
-                                    ->maxDate(now()),
-                                
-                                Forms\Components\DatePicker::make('last_working_date')
-                                    ->label('Tanggal Berakhir Kerja')
-                                    ->displayFormat('d/m/Y')
-                                    ->helperText('Kosongkan jika masih aktif bekerja'),
-                            ]),
-                    ]),
-
-                // Account Settings Section
-                Forms\Components\Section::make('Pengaturan Akun')
-                    ->description('Pengaturan foto profil, status akun, dan kedaluwarsa akun')
-                    ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\FileUpload::make('avatar_url')
-                                    ->label('Foto Profil')
-                                    ->image()
-                                    ->disk('public') // Ensure using public disk
-                                    ->directory('avatars')
-                                    ->visibility('public') // Make sure files are public
-                                    ->imageEditor()
-                                    ->imageCropAspectRatio('1:1') // Force square crop
-                                    ->imageResizeTargetWidth('300')
-                                    ->imageResizeTargetHeight('300')
-                                    ->circleCropper()
-                                    ->maxSize(2048) // 2MB
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->helperText('Upload foto profil (maksimal 2MB, format: JPG, PNG, WebP)')
-                                    ->columnSpan(1)
-                                    ->imagePreviewHeight('150')
-                                    ->uploadingMessage('Mengupload foto...')
-                                    ->removeUploadedFileButtonPosition('right')
-                                    ->uploadButtonPosition('left')
-                                    ->extraAttributes([
-                                        'class' => 'avatar-upload-field'
+                                Forms\Components\Section::make('Personal Information')
+                                    ->schema([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('phone_number')
+                                                    ->label('Nomor Telepon')
+                                                    ->tel()
+                                                    ->maxLength(255)
+                                                    ->placeholder('08xx-xxxx-xxxx'),
+                                                
+                                                Forms\Components\DatePicker::make('date_of_birth')
+                                                    ->label('Tanggal Lahir')
+                                                    ->displayFormat('d/m/Y')
+                                                    ->maxDate(now()->subYears(17)), // Minimal 17 tahun
+                                                
+                                                Forms\Components\Select::make('gender')
+                                                    ->label('Jenis Kelamin')
+                                                    ->options([
+                                                        'male' => 'Laki-laki',
+                                                        'female' => 'Perempuan',
+                                                    ])
+                                                    ->placeholder('Pilih jenis kelamin'),
+                                                
+                                                Forms\Components\Select::make('department')
+                                                    ->label('Departemen')
+                                                    ->options([
+                                                        'bisnis' => 'Bisnis',
+                                                        'operasional' => 'Operasional',
+                                                    ])
+                                                    ->default('operasional')
+                                                    ->required(),
+                                            ]),
+                                        
+                                        Forms\Components\Textarea::make('address')
+                                            ->label('Alamat')
+                                            ->maxLength(500)
+                                            ->rows(3)
+                                            ->placeholder('Alamat lengkap')
+                                            ->columnSpanFull(),
                                     ]),
                                 
-                                Forms\Components\Select::make('status')
-                                    ->label('Status Akun')
-                                    ->options([
-                                        'active' => '🟢 Aktif - Dapat mengakses sistem',
-                                        'inactive' => '🟠 Nonaktif - Akses sementara diblokir', 
-                                        'terminated' => '🔴 Terminated - Akses permanent diblokir',
-                                    ])
-                                    ->default('active')
-                                    ->required()
-                                    ->helperText('Mengatur tingkat akses pengguna ke sistem')
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, $set) {
-                                        // Auto set expire_date if terminated
-                                        if ($state === 'terminated') {
-                                            $set('expire_date', now());
-                                        }
-                                    }),
+                                Forms\Components\Section::make('Employment Information')
+                                    ->schema([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\DatePicker::make('hire_date')
+                                                    ->label('Tanggal Mulai Kerja')
+                                                    ->displayFormat('d/m/Y')
+                                                    ->maxDate(now()),
+                                                
+                                                Forms\Components\DatePicker::make('last_working_date')
+                                                    ->label('Tanggal Berakhir Kerja')
+                                                    ->displayFormat('d/m/Y')
+                                                    ->helperText('Kosongkan jika masih aktif bekerja'),
+                                            ]),
+                                    ]),
+                                
+                                Forms\Components\Section::make('Account Settings')
+                                    ->schema([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\FileUpload::make('avatar_url')
+                                                    ->label('Foto Profil')
+                                                    ->image()
+                                                    ->disk('public')
+                                                    ->directory('avatars')
+                                                    ->visibility('public')
+                                                    ->imageEditor()
+                                                    ->imageCropAspectRatio('1:1')
+                                                    ->imageResizeTargetWidth('300')
+                                                    ->imageResizeTargetHeight('300')
+                                                    ->circleCropper()
+                                                    ->maxSize(2048)
+                                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                                    ->helperText('Upload foto profil (maksimal 2MB, format: JPG, PNG, WebP)')
+                                                    ->imagePreviewHeight('150')
+                                                    ->uploadingMessage('Mengupload foto...')
+                                                    ->removeUploadedFileButtonPosition('right')
+                                                    ->uploadButtonPosition('left')
+                                                    ->extraAttributes(['class' => 'avatar-upload-field']),
+                                                
+                                                Forms\Components\Select::make('status')
+                                                    ->label('Status Akun')
+                                                    ->options([
+                                                        'active' => '🟢 Aktif - Dapat mengakses sistem',
+                                                        'inactive' => '🟠 Nonaktif - Akses sementara diblokir', 
+                                                        'terminated' => '🔴 Terminated - Akses permanent diblokir',
+                                                    ])
+                                                    ->default('active')
+                                                    ->required()
+                                                    ->helperText('Mengatur tingkat akses pengguna ke sistem')
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($state, $set) {
+                                                        if ($state === 'terminated') {
+                                                            $set('expire_date', now());
+                                                        }
+                                                    }),
+                                            ]),
+                                        
+                                        Forms\Components\DateTimePicker::make('expire_date')
+                                            ->label('Tanggal Kedaluwarsa Akun')
+                                            ->helperText('Kosongkan jika akun tidak memiliki batas waktu. Otomatis diisi jika status Terminated.')
+                                            ->displayFormat('d/m/Y H:i')
+                                            ->minDate(now())
+                                            ->hidden(fn ($get) => $get('status') === 'terminated')
+                                            ->columnSpanFull(),
+                                    ]),
                             ]),
-                        
-                        Forms\Components\DateTimePicker::make('expire_date')
-                            ->label('Tanggal Kedaluwarsa Akun')
-                            ->helperText('Kosongkan jika akun tidak memiliki batas waktu. Otomatis diisi jika status Terminated.')
-                            ->displayFormat('d/m/Y H:i')
-                            ->minDate(now())
-                            ->hidden(fn ($get) => $get('status') === 'terminated'),
-                    ]),
+                            
+                        Forms\Components\Tabs\Tab::make('Documents & Notes')
+                            ->icon('heroicon-o-document-text')
+                            ->schema([
+                                Forms\Components\Section::make('Document Upload')
+                                    ->schema([
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\FileUpload::make('contract_document')
+                                                    ->label('Dokumen Kontrak')
+                                                    ->directory('user-contracts')
+                                                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                                                    ->maxSize(5120) // 5MB
+                                                    ->openable()
+                                                    ->downloadable()
+                                                    ->helperText('Upload dokumen kontrak kerja (PDF, JPG, PNG - maksimal 5MB)'),
+                                                
+                                                Forms\Components\FileUpload::make('identity_document')
+                                                    ->label('Dokumen Identitas')
+                                                    ->directory('user-identity')
+                                                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                                                    ->maxSize(5120) // 5MB
+                                                    ->openable()
+                                                    ->downloadable()
+                                                    ->helperText('Upload dokumen identitas (KTP, SIM, Passport - maksimal 5MB)'),
+                                            ]),
+                                        
+                                        Forms\Components\FileUpload::make('additional_documents')
+                                            ->label('Dokumen Tambahan')
+                                            ->directory('user-documents')
+                                            ->multiple()
+                                            ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                            ->maxSize(5120) // 5MB per file
+                                            ->maxFiles(5)
+                                            ->openable()
+                                            ->downloadable()
+                                            ->helperText('Upload dokumen tambahan (maksimal 5 file, masing-masing 5MB)')
+                                            ->columnSpanFull(),
+                                    ]),
+                                
+                                Forms\Components\Section::make('Notes & Comments')
+                                    ->schema([
+                                        Forms\Components\Textarea::make('notes')
+                                            ->label('Catatan Karyawan')
+                                            ->placeholder('Tambahkan catatan khusus tentang karyawan ini (prestasi, peringatan, dll.)')
+                                            ->rows(4)
+                                            ->maxLength(2000)
+                                            ->helperText('Catatan internal yang tidak terlihat oleh karyawan (maksimal 2000 karakter)')
+                                            ->columnSpanFull(),
+                                        
+                                        Forms\Components\Textarea::make('emergency_contact')
+                                            ->label('Kontak Darurat')
+                                            ->placeholder('Nama: [Nama]\nHubungan: [Hubungan]\nTelepon: [Nomor]\nAlamat: [Alamat]')
+                                            ->rows(4)
+                                            ->maxLength(1000)
+                                            ->helperText('Informasi kontak darurat karyawan (maksimal 1000 karakter)')
+                                            ->columnSpanFull(),
+                                    ]),
+                            ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -871,6 +922,75 @@ class UserResource extends Resource
                             return !static::isTargetUserSuperAdmin($record);
                         }),
 
+                    Tables\Actions\Action::make('download_form_pdf')
+                        ->label('Form PDF')
+                        ->icon('heroicon-o-document-text')
+                        ->color('info')
+                        ->form([
+                            Forms\Components\Radio::make('form_type')
+                                ->label('Jenis Form PDF')
+                                ->options([
+                                    'blank' => 'Form Kosong - Untuk diisi manual oleh calon karyawan',
+                                    'filled' => 'Form Terisi - Berdasarkan data user yang sudah ada'
+                                ])
+                                ->default('blank')
+                                ->required()
+                                ->descriptions([
+                                    'blank' => 'Generate form PDF kosong yang siap diprint dan diisi secara manual',
+                                    'filled' => 'Generate form PDF yang sudah terisi dengan data user ini untuk verifikasi'
+                                ])
+                        ])
+                        ->action(function (array $data, $record) {
+                            if ($data['form_type'] === 'blank') {
+                                // Use notification to inform user
+                                Notification::make()
+                                    ->title('Form PDF Kosong')
+                                    ->body('Klik link berikut untuk download form PDF kosong')
+                                    ->success()
+                                    ->actions([
+                                        \Filament\Notifications\Actions\Action::make('download')
+                                            ->label('Download Form')
+                                            ->url(route('user-form.blank'))
+                                            ->openUrlInNewTab()
+                                            ->button(),
+                                    ])
+                                    ->persistent()
+                                    ->send();
+                            } else {
+                                // For filled form, create temporary session data and redirect
+                                session()->put('user_form_data', [
+                                    'name' => $record->name,
+                                    'email' => $record->email,
+                                    'phone_number' => $record->phone_number,
+                                    'date_of_birth' => $record->date_of_birth?->format('Y-m-d'),
+                                    'gender' => $record->gender,
+                                    'department' => $record->department,
+                                    'address' => $record->address,
+                                    'hire_date' => $record->hire_date?->format('Y-m-d'),
+                                    'emergency_contact' => $record->emergency_contact,
+                                    'notes' => $record->notes,
+                                ]);
+                                
+                                Notification::make()
+                                    ->title('Form PDF Terisi')
+                                    ->body('Data telah disiapkan. Klik link berikut untuk generate PDF terisi.')
+                                    ->success()
+                                    ->actions([
+                                        \Filament\Notifications\Actions\Action::make('download')
+                                            ->label('Download Form Terisi')
+                                            ->url(route('user-form.filled-session'))
+                                            ->openUrlInNewTab()
+                                            ->button(),
+                                    ])
+                                    ->persistent()
+                                    ->send();
+                            }
+                        })
+                        ->modalHeading('Download Form PDF')
+                        ->modalDescription('Pilih jenis form PDF yang ingin didownload')
+                        ->modalSubmitActionLabel('Download PDF')
+                        ->modalCancelActionLabel('Cancel'),
+
                     Tables\Actions\Action::make('manage_payroll')
                         ->label('Kelola Gaji')
                         ->icon('heroicon-o-banknotes')
@@ -997,6 +1117,32 @@ class UserResource extends Resource
                     ->icon('heroicon-o-ellipsis-vertical')
                     ->size('sm')
                     ->button(),
+            ])
+            ->headerActions([
+                Tables\Actions\Action::make('download_blank_form')
+                    ->label('Download Form Kosong')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('info')
+                    ->url(route('user-form.blank'))
+                    ->openUrlInNewTab()
+                    ->tooltip('Download formulir pendaftaran karyawan kosong untuk diisi manual')
+                    ->visible(function() {
+                        $user = Auth::user();
+                        return static::isSuperAdmin() || ($user && ($user->roles->contains('name', 'hr_manager') || $user->roles->contains('name', 'admin')));
+                    }),
+                    
+                Tables\Actions\Action::make('hr_help')
+                    ->label('Panduan HR')
+                    ->icon('heroicon-o-question-mark-circle')
+                    ->color('gray')
+                    ->modalHeading('Panduan Penggunaan Form PDF')
+                    ->modalContent(view('filament.modals.hr-form-help'))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->visible(function() {
+                        $user = Auth::user();
+                        return static::isSuperAdmin() || ($user && ($user->roles->contains('name', 'hr_manager') || $user->roles->contains('name', 'admin')));
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

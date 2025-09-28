@@ -3,6 +3,7 @@
 use App\Http\Controllers\FrontendDataPribadiController;
 use App\Http\Controllers\InvoiceOrderController;
 use App\Http\Controllers\OrderProfitLossController;
+use App\Http\Controllers\UserFormPdfController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
@@ -47,6 +48,22 @@ Route::get('/simulasi/{record:slug}', [SimulasiDisplayController::class, 'show']
 // Rute untuk download PDF simulasi produk
 Route::get('/simulasi/{record:slug}/download-pdf', [SimulasiDisplayController::class, 'downloadPdf'])
     ->name('simulasi.pdf')
+    ->middleware(\Filament\Http\Middleware\Authenticate::class);
+
+// USER REGISTRATION FORM PDF
+// Rute untuk generate form pendaftaran karyawan kosong (PDF)
+Route::get('/hr/user-form/blank', [UserFormPdfController::class, 'generateBlankForm'])
+    ->name('user-form.blank')
+    ->middleware(\Filament\Http\Middleware\Authenticate::class);
+
+// Rute untuk generate form pendaftaran karyawan terisi (PDF)
+Route::post('/hr/user-form/filled', [UserFormPdfController::class, 'generateFilledForm'])
+    ->name('user-form.filled')
+    ->middleware(\Filament\Http\Middleware\Authenticate::class);
+
+// Rute untuk generate form terisi dari session (GET request)
+Route::get('/hr/user-form/filled-session', [UserFormPdfController::class, 'generateFilledFormFromSession'])
+    ->name('user-form.filled-session')
     ->middleware(\Filament\Http\Middleware\Authenticate::class);
 
 // PAYROLL SLIP GAJI

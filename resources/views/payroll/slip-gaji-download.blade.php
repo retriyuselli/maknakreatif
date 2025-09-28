@@ -280,7 +280,7 @@ Invoice Area
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <h1 class="big-title">SLIP GAJI</h1>
+                                    <h1 class="big-title">SLIP GAJI123</h1>
                                     <span><b>Karyawan :</b> {{ $user->name }}</span>
                                     <span><b>Periode :</b> {{ now()->format('F Y') }}</span>
                                 </div>
