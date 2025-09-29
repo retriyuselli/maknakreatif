@@ -18,18 +18,26 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_user');
+        // All authenticated users can access the user list (they'll see filtered results based on role)
+        return true;
     }
 
     /**
      * Determine whether the user can view the model.
      *
      * @param  \App\Models\User  $user
+     * @param  \App\Models\User  $model
      * @return bool
      */
-    public function view(User $user): bool
+    public function view(User $user, User $model): bool
     {
-        return $user->can('view_user');
+        // Super admin can view any user
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+        
+        // Non-super admin users can only view their own data
+        return $user->id === $model->id;
     }
 
     /**

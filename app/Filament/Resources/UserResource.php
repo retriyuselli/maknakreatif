@@ -61,11 +61,12 @@ class UserResource extends Resource
             ->with('roles') // Load roles for display and counting
             ->withCount('roles'); // Add roles count for sorting and display
         
-        // If current user is not super_admin, hide super_admin users from the list
+        // If current user is not super_admin, only show their own data
         if (!static::isSuperAdmin()) {
-            $query->whereDoesntHave('roles', function (Builder $query) {
-                $query->where('name', 'super_admin');
-            });
+            $user = Auth::user();
+            if ($user) {
+                $query->where('id', $user->id);
+            }
         }
         
         return $query;
@@ -331,13 +332,6 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
-                $user = Auth::user();
-                // Jika bukan super_admin, hanya tampilkan data milik user yang login
-                if ($user && !$user->roles->contains('name', 'super_admin')) {
-                    $query->where('id', $user->id);
-                }
-            })
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -820,6 +814,16 @@ class UserResource extends Resource
                     }),
             ])
             ->actions([
+                // Individual ViewAction for non-super_admin users
+                Tables\Actions\ViewAction::make()
+                    ->label('Lihat')
+                    ->color('info')
+                    ->visible(function () {
+                        // Show for non-super_admin users
+                        return !static::isSuperAdmin();
+                    }),
+                
+                // Full ActionGroup for super_admin users
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make()
                         ->label('Lihat')
@@ -833,8 +837,9 @@ class UserResource extends Resource
                             if (static::isSuperAdmin()) {
                                 return true;
                             }
-                            // Non-super admin cannot edit super admin users
-                            return !static::isTargetUserSuperAdmin($record);
+                            // Non-super admin users can only edit their own data
+                            $user = Auth::user();
+                            return $user && $user->id === $record->id;
                         }),
                     
                     Tables\Actions\Action::make('reset_password')
@@ -870,12 +875,8 @@ class UserResource extends Resource
                         ->modalCancelActionLabel('Cancel')
                         ->modalContent(view('filament.modal.reset-password-content'))
                         ->visible(function ($record) {
-                            // Super admin can reset anyone's password
-                            if (static::isSuperAdmin()) {
-                                return true;
-                            }
-                            // Non-super admin cannot reset super admin's password
-                            return !static::isTargetUserSuperAdmin($record);
+                            // Only super admin can reset passwords
+                            return static::isSuperAdmin();
                         }),
                     
                     Tables\Actions\Action::make('toggle_status')
@@ -916,10 +917,8 @@ class UserResource extends Resource
                         })
                         ->modalCancelActionLabel('Cancel')
                         ->visible(function ($record) {
-                            if (static::isSuperAdmin()) {
-                                return true;
-                            }
-                            return !static::isTargetUserSuperAdmin($record);
+                            // Only super admin can toggle user status
+                            return static::isSuperAdmin();
                         }),
 
                     Tables\Actions\Action::make('download_form_pdf')
@@ -989,7 +988,11 @@ class UserResource extends Resource
                         ->modalHeading('Download Form PDF')
                         ->modalDescription('Pilih jenis form PDF yang ingin didownload')
                         ->modalSubmitActionLabel('Download PDF')
-                        ->modalCancelActionLabel('Cancel'),
+                        ->modalCancelActionLabel('Cancel')
+                        ->visible(function () {
+                            // Only super admin can download forms
+                            return static::isSuperAdmin();
+                        }),
 
                     Tables\Actions\Action::make('manage_payroll')
                         ->label('Kelola Gaji')
@@ -1015,6 +1018,10 @@ class UserResource extends Resource
                                 );
                             }
                             return 'Belum ada data gaji. Klik untuk menambah.';
+                        })
+                        ->visible(function () {
+                            // Only super admin can manage payroll
+                            return static::isSuperAdmin();
                         }),
 
                     Tables\Actions\Action::make('view_salary_history')
@@ -1039,7 +1046,7 @@ class UserResource extends Resource
                         ->modalSubmitAction(false)
                         ->modalCancelActionLabel('Tutup')
                         ->visible(function ($record) {
-                            return $record->payrolls()->exists();
+                            return static::isSuperAdmin() && $record->payrolls()->exists();
                         }),
                     
                     Tables\Actions\Action::make('deactivate_user')
@@ -1065,9 +1072,7 @@ class UserResource extends Resource
                             return "Apakah Anda yakin ingin menonaktifkan {$record->name} secara permanen? User tidak akan bisa mengakses sistem lagi, namun data historis akan tetap tersimpan.";
                         })
                         ->visible(function ($record) {
-                            return $record->status !== 'terminated' && (
-                                static::isSuperAdmin() || !static::isTargetUserSuperAdmin($record)
-                            );
+                            return static::isSuperAdmin() && $record->status !== 'terminated';
                         }),
                     
                     Tables\Actions\DeleteAction::make()
@@ -1104,19 +1109,19 @@ class UserResource extends Resource
                                 ->title('User berhasil dihapus')
                         )
                         ->visible(function ($record) {
-                            // Super admin can delete anyone
-                            if (static::isSuperAdmin()) {
-                                return true;
-                            }
-                            // Non-super admin cannot delete super admin users
-                            return !static::isTargetUserSuperAdmin($record);
+                            // Only super admin can delete users
+                            return static::isSuperAdmin();
                         }),
                 ])
                     ->label('Aksi')
                     ->color('primary')
                     ->icon('heroicon-o-ellipsis-vertical')
                     ->size('sm')
-                    ->button(),
+                    ->button()
+                    ->visible(function () {
+                        // Show action group only for super_admin
+                        return static::isSuperAdmin();
+                    }),
             ])
             ->headerActions([
                 Tables\Actions\Action::make('download_blank_form')
@@ -1306,6 +1311,7 @@ class UserResource extends Resource
         return [
             'index' => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
+            'view' => Pages\ViewUser::route('/{record}'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }

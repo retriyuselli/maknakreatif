@@ -16,7 +16,7 @@ class LeaveBalanceWidget extends BaseWidget
     
     public function getHeading(): ?string
     {
-        return 'Leave Balance Overview';
+        return 'Ringkasan Saldo Cuti';
     }
 
     protected function getStats(): array
@@ -76,34 +76,34 @@ class LeaveBalanceWidget extends BaseWidget
             ->count('user_id');
 
         return [
-            Stat::make('My Annual Leave', $currentUserAnnualBalance ? $currentUserAnnualBalance->remaining_days . ' days' : 'Not set')
-                ->description('Remaining annual leave days')
+            Stat::make('Cuti Tahunan Saya', $currentUserAnnualBalance ? $currentUserAnnualBalance->remaining_days . ' hari' : 'Belum diatur')
+                ->description('Sisa hari cuti tahunan')
                 ->descriptionIcon('heroicon-m-calendar-days')
                 ->color($this->getLeaveBalanceColor($currentUserAnnualBalance?->remaining_days ?? 0))
                 ->chart($this->getLeaveUsageChart($currentUserAnnualBalance)),
 
-            Stat::make('My Sick Leave', $currentUserSickBalance ? $currentUserSickBalance->remaining_days . ' days' : 'Not set')
-                ->description('Remaining sick leave days')
+            Stat::make('Cuti Sakit Saya', $currentUserSickBalance ? $currentUserSickBalance->remaining_days . ' hari' : 'Belum diatur')
+                ->description('Sisa hari cuti sakit')
                 ->descriptionIcon('heroicon-m-heart')
                 ->color($this->getSickLeaveColor($currentUserSickBalance?->remaining_days ?? 0)),
 
-            Stat::make('Team Average', number_format($averageAnnualLeave, 1) . ' days')
-                ->description('Average annual leave remaining')
+            Stat::make('Rata-rata Tim', number_format($averageAnnualLeave, 1) . ' hari')
+                ->description('Rata-rata sisa cuti tahunan')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('info'),
 
-            Stat::make('Low Balance Alert', $lowLeaveBalanceCount . ' employees')
-                ->description('Employees with less than 5 days')
+            Stat::make('Peringatan Saldo Rendah', $lowLeaveBalanceCount . ' karyawan')
+                ->description('Karyawan dengan sisa kurang dari 5 hari')
                 ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color($lowLeaveBalanceCount > 0 ? 'danger' : 'success'),
 
-            Stat::make('Total Used This Year', $totalUsedLeave . ' days')
-                ->description('Company-wide leave days used')
+            Stat::make('Total Digunakan Tahun Ini', $totalUsedLeave . ' hari')
+                ->description('Total hari cuti yang digunakan perusahaan')
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('warning'),
 
-            Stat::make('Active Employees', $activeEmployeesWithLeave . '/' . $totalEmployees)
-                ->description('Employees with leave balances')
+            Stat::make('Karyawan Aktif', $activeEmployeesWithLeave . '/' . $totalEmployees)
+                ->description('Karyawan dengan saldo cuti')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('primary'),
         ];
@@ -152,7 +152,7 @@ class LeaveBalanceWidget extends BaseWidget
 
     public function getDescription(): ?string
     {
-        return 'Overview of leave balances for the current year (' . now()->year . ')';
+        return 'Ringkasan saldo cuti untuk tahun berjalan (' . now()->year . ')';
     }
 
     protected function getColumns(): int
