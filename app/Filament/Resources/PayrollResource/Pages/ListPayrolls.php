@@ -8,6 +8,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Resources\Components\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class ListPayrolls extends ListRecords
 {
@@ -18,7 +19,11 @@ class ListPayrolls extends ListRecords
         return [
             Actions\CreateAction::make()
                 ->label('Tambah Payroll')
-                ->icon('heroicon-o-plus'),
+                ->icon('heroicon-o-plus')
+                ->visible(function () {
+                    $user = Auth::user();
+                    return $user && ($user->roles->contains('name', 'super_admin') || $user->roles->contains('name', 'Finance'));
+                }),
         ];
     }
 
