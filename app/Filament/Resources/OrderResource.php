@@ -157,15 +157,6 @@ class OrderResource extends Resource
                             ->label('Pax')
                             ->default(1000)
                             ->numeric(),
-                        Forms\Components\ToggleButtons::make('status')
-                            ->inline()
-                            ->options(OrderStatus::class)
-                            ->label('Status Pesanan')
-                            ->required(),
-                        Forms\Components\RichEditor::make('note')
-                            ->label('Keterangan Tambahan')
-                            ->fileAttachmentsDirectory('orders')
-                            ->fileAttachmentsDisk('public'),
                         Forms\Components\FileUpload::make('doc_kontrak')
                             ->label('Upload Kontrak')
                             ->reorderable()
@@ -175,6 +166,17 @@ class OrderResource extends Resource
                             ->directory('doc_kontrak')
                             ->downloadable()
                             ->acceptedFileTypes(['application/pdf']),
+                        Forms\Components\RichEditor::make('note')
+                            ->label('Keterangan Tambahan')
+                            ->fileAttachmentsDirectory('orders')
+                            ->columnSpan(2)
+                            ->fileAttachmentsDisk('public'),
+                        Forms\Components\ToggleButtons::make('status')
+                            ->inline()
+                            ->options(OrderStatus::class)
+                            ->label('Status Pesanan')
+                            ->required()
+                            ->helperText('Status Done: Finance hanya bisa view, Super Admin bisa edit.'),
                     ]),
 
                 Wizard\Step::make('Detail Pembayaran')
@@ -871,7 +873,12 @@ class OrderResource extends Resource
                             ->content(fn(Order $record): ?string => $record->updated_at?->diffForHumans()),
                         Forms\Components\Placeholder::make('last_edited_by')
                             ->label('Last Edited By')
-                            ->content(fn(Order $record): ?string => $record->user?->name ?? 'Unknown User'),
+                            ->content(function(Order $record): ?string {
+                                if ($record->lastEditedBy) {
+                                    return $record->lastEditedBy->name . ' on ' . $record->updated_at?->format('M d, Y H:i');
+                                }
+                                return 'Not tracked yet';
+                            }),
                     ])
                     ->columnSpan(['lg' => 1])
                     ->hidden(fn(?Order $record) => $record === null),
@@ -1250,11 +1257,41 @@ class OrderResource extends Resource
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make()
                         ->tooltip('Edit detail pesanan')
-                        ->visible(fn (Order $record): bool => !$record->trashed()),
+                        ->visible(function (Order $record): bool {
+                            // Jika record trashed, tidak bisa edit
+                            if ($record->trashed()) {
+                                return false;
+                            }
+                            
+                            // Jika status done, hanya super_admin yang bisa edit (finance hanya bisa view)
+                            if ($record->status === OrderStatus::Done) {
+                                /** @var \App\Models\User $user */
+                                $user = Auth::user();
+                                return $user && $user->hasRole('super_admin');
+                            }
+                            
+                            // Status selain done, semua user bisa edit
+                            return true;
+                        }),
 
                     Tables\Actions\ViewAction::make()
                         ->tooltip('Lihat detail pesanan')
-                        ->visible(fn (Order $record): bool => $record->trashed()),
+                        ->visible(function (Order $record): bool {
+                            // View action selalu tersedia untuk record yang tidak trashed
+                            if ($record->trashed()) {
+                                return true; // Tetap bisa view jika trashed
+                            }
+                            
+                            // Jika status done dan user bukan super_admin, tampilkan view action (termasuk finance)
+                            if ($record->status === OrderStatus::Done) {
+                                /** @var \App\Models\User $user */
+                                $user = Auth::user();
+                                return !($user && $user->hasRole('super_admin'));
+                            }
+                            
+                            // Untuk status selain done, view action tersedia tapi tidak prioritas
+                            return false;
+                        }),
 
                     Tables\Actions\RestoreAction::make()
                         ->tooltip('Pulihkan pesanan')
@@ -1459,6 +1496,7 @@ class OrderResource extends Resource
         return [
             'index' => Pages\ListOrders::route('/'),
             'create' => Pages\CreateOrder::route('/create'),
+            'view' => Pages\ViewOrder::route('/{record}'),
             'edit' => Pages\EditOrder::route('/{record}/edit'),
             'invoice' => Pages\Invoice::route('/{record}/invoice'),
         ];
@@ -1472,8 +1510,19 @@ class OrderResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([SoftDeletingScope::class]);
+        
+        // Super admin and finance can access all orders
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user && ($user->hasRole('super_admin') || $user->hasRole('Finance'))) {
+                return $query;
+            }
+        }
+        
+        // Other users can only access their own orders (as Account Manager)
+        return $query->where('user_id', Auth::user()->id);
     }
 
     public static function getItemsRepeater(): Repeater

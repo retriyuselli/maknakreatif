@@ -22,6 +22,7 @@ class Order extends Model
         'number',
         'user_id',
         'employee_id',
+        'last_edited_by',
         'no_kontrak',
         'doc_kontrak',
         'pax',
@@ -82,9 +83,18 @@ class Order extends Model
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return parent::getEloquentQuery()->whereHas('employee.user', function ($query) {
-            $query->where('id', Auth::user()->id);
-        });
+        $query = parent::getEloquentQuery();
+        
+        // Super admin and finance can access all orders
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user && ($user->hasRole('super_admin') || $user->hasRole('Finance'))) {
+                return $query;
+            }
+        }
+        
+        // Other users can only access their own orders (as Account Manager)
+        return $query->where('user_id', Auth::user()->id);
     }
 
     public function expenses()
@@ -110,6 +120,11 @@ class Order extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function lastEditedBy()
+    {
+        return $this->belongsTo(User::class, 'last_edited_by');
     }
 
     public function items(): HasMany

@@ -838,7 +838,7 @@ class PayrollResource extends Resource
                         ->color('info')
                         ->visible(function () {
                             $user = Auth::user();
-                            return $user && ($user->roles->contains('name', 'super_admin') || $user->roles->contains('name', 'finance'));
+                            return $user && ($user->roles->contains('name', 'super_admin') || $user->roles->contains('name', 'Finance'));
                         })
                         ->form([
                             Forms\Components\Select::make('target_month')
@@ -1008,7 +1008,7 @@ class PayrollResource extends Resource
                         ->color('success')
                         ->visible(function () {
                             $user = Auth::user();
-                            return $user && ($user->roles->contains('name', 'super_admin') || $user->roles->contains('name', 'finance'));
+                            return $user && ($user->roles->contains('name', 'super_admin') || $user->roles->contains('name', 'Finance'));
                         })
                         ->form([
                             Forms\Components\Select::make('target_month')
