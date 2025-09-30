@@ -42,14 +42,26 @@ class LeaveBalanceWidget extends BaseWidget
             })
             ->first();
 
-        // Get all users' leave balances for overview
-        $totalEmployees = User::where('status', 'active')->count();
+        // Get all active employees (excluding super_admin)
+        $totalEmployees = User::where('status', 'active')
+            ->whereHas('roles', function($query) {
+                $query->whereIn('name', ['Office', 'employee', 'Account Manager', 'Finance', 'Event Manager', 'admin_am'])
+                      ->whereNotIn('name', ['super_admin']);
+            })
+            ->count();
         
-        // Average remaining annual leave days
+        // Average remaining annual leave days for active employees only
         $averageAnnualLeave = LeaveBalance::where('year', $currentYear)
             ->whereHas('leaveType', function($query) {
                 $query->where('name', 'like', '%annual%')
                       ->orWhere('name', 'like', '%tahunan%');
+            })
+            ->whereHas('user', function($query) {
+                $query->where('status', 'active')
+                      ->whereHas('roles', function($roleQuery) {
+                          $roleQuery->whereIn('name', ['Office', 'employee', 'Account Manager', 'Finance', 'Event Manager', 'admin_am'])
+                                  ->whereNotIn('name', ['super_admin']);
+                      });
             })
             ->avg('remaining_days') ?? 0;
             
@@ -61,17 +73,43 @@ class LeaveBalanceWidget extends BaseWidget
             })
             ->avg('remaining_days') ?? 0;
 
-        // Count employees with low leave balance (less than 5 days)
+        // Count employees with low ANNUAL leave balance (less than 5 days) - only active employees
         $lowLeaveBalanceCount = LeaveBalance::where('year', $currentYear)
             ->where('remaining_days', '<', 5)
-            ->count();
+            ->whereHas('leaveType', function($query) {
+                $query->where('name', 'like', '%tahunan%')
+                      ->orWhere('name', 'like', '%annual%');
+            })
+            ->whereHas('user', function($query) {
+                $query->where('status', 'active')
+                      ->whereHas('roles', function($roleQuery) {
+                          $roleQuery->whereIn('name', ['Office', 'employee', 'Account Manager', 'Finance', 'Event Manager', 'admin_am'])
+                                  ->whereNotIn('name', ['super_admin']);
+                      });
+            })
+            ->distinct('user_id')
+            ->count('user_id');
 
-        // Total leave days used this year
+        // Total leave days used this year by active employees only
         $totalUsedLeave = LeaveBalance::where('year', $currentYear)
+            ->whereHas('user', function($query) {
+                $query->where('status', 'active')
+                      ->whereHas('roles', function($roleQuery) {
+                          $roleQuery->whereIn('name', ['Office', 'employee', 'Account Manager', 'Finance', 'Event Manager', 'admin_am'])
+                                  ->whereNotIn('name', ['super_admin']);
+                      });
+            })
             ->sum('used_days') ?? 0;
 
         // Get active employees with leave balances
         $activeEmployeesWithLeave = LeaveBalance::where('year', $currentYear)
+            ->whereHas('user', function($query) {
+                $query->where('status', 'active')
+                      ->whereHas('roles', function($roleQuery) {
+                          $roleQuery->whereIn('name', ['Office', 'employee', 'Account Manager', 'Finance', 'Event Manager', 'admin_am'])
+                                  ->whereNotIn('name', ['super_admin']);
+                      });
+            })
             ->distinct('user_id')
             ->count('user_id');
 
@@ -93,7 +131,7 @@ class LeaveBalanceWidget extends BaseWidget
                 ->color('info'),
 
             Stat::make('Peringatan Saldo Rendah', $lowLeaveBalanceCount . ' karyawan')
-                ->description('Karyawan dengan sisa kurang dari 5 hari')
+                ->description('Karyawan dengan sisa cuti tahunan kurang dari 5 hari')
                 ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color($lowLeaveBalanceCount > 0 ? 'danger' : 'success'),
 
