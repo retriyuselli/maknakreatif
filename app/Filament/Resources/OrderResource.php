@@ -1516,7 +1516,7 @@ class OrderResource extends Resource
         // Super admin and finance can access all orders
         if (Auth::check()) {
             $user = Auth::user();
-            if ($user && ($user->hasRole('super_admin') || $user->hasRole('Finance'))) {
+            if ($user && ($user->hasRole('super_admin') || $user->hasRole('Finance') || $user->hasRole('admin_am'))) {
                 return $query;
             }
         }
