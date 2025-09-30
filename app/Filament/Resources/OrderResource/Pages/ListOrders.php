@@ -11,6 +11,7 @@ use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification; // Add this
 use Illuminate\Support\Carbon; // Add this
+use Illuminate\Support\Facades\Auth;
 
 class ListOrders extends ListRecords
 {
@@ -79,7 +80,12 @@ class ListOrders extends ListRecords
                         return response()->streamDownload(fn() => print($pdf->output()), 'laporan_laba_rugi_' . now()->format('YmdHis') . '.pdf');
                     })
                     ->tooltip('Download laporan Laba Rugi (PDF) berdasarkan filter saat ini.'),
-                ])->label('Laporan L/R')->button()->color('warning'),
+                ])->label('Laporan L/R')->button()->color('warning')
+                ->visible(function () {
+                    $user = Auth::user();
+                    // Hanya super_admin dan Finance yang bisa melihat ActionGroup ini
+                    return $user && ($user->hasRole('super_admin') || $user->hasRole('Finance'));
+                }),
         ];
     }
 
