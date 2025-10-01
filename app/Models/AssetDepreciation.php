@@ -40,10 +40,10 @@ class AssetDepreciation extends Model
         return $this->belongsTo(FixedAsset::class);
     }
 
-    // public function journalBatch(): BelongsTo
-    // {
-    //     return $this->belongsTo(JournalBatch::class);
-    // }
+    public function journalBatch(): BelongsTo
+    {
+        return $this->belongsTo(JournalBatch::class);
+    }
 
     // Methods
     public function createJournalEntry(): void
