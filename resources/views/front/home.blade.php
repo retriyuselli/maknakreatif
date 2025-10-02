@@ -5,11 +5,11 @@
 @section('content')
     <style>
         * {
-            font-family: 'Poppins', sans-serif !important;
+            font-family: 'Noto Sans', sans-serif !important;
         }
     </style>
 
-    <div class="min-h-screen bg-white" style="font-family: 'Poppins', sans-serif;">
+    <div class="min-h-screen bg-white" style="font-family: 'Noto Sans', sans-serif;">
         <!-- Navigation Header -->
         @include('front.header')
 
@@ -176,100 +176,91 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-8">
                     <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">
-                        Dipercaya oleh 200+ perusahaan dan vendor di Indonesia
+                        PT. Makna Kreatif Indonesia telah banyak melakukan kerjasama dengan berbagai perusahaan <br>
+                        industri pernikahan di Sumatera Selatan dan sekitarnya, antara lain:
                     </p>
                 </div>
 
                 <!-- Single Row - Moving Left -->
                 <div class="relative overflow-hidden">
-                    <div class="animate-scroll-left flex space-x-8"
-                        style="animation: scroll-left 60s linear infinite; width: max-content;">
+                    <div class="animate-scroll-left flex space-x-12"
+                        style="animation: scroll-left 45s linear infinite; width: max-content;">
                         <!-- First set of logos -->
-                        <div class="flex space-x-8 flex-shrink-0">
+                        <div class="flex space-x-12 flex-shrink-0">
                             @if (isset($topRowLogos) && $topRowLogos->count() > 0)
+                                @php $logoCount = 0; @endphp
                                 @foreach ($topRowLogos as $logo)
-                                    <img src="{{ $logo->logo_url }}" alt="{{ $logo->alt_text ?: $logo->company_name }}"
-                                        title="{{ $logo->company_name }}"
-                                        class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                @endforeach
-                                @if (isset($bottomRowLogos) && $bottomRowLogos->count() > 0)
-                                    @foreach ($bottomRowLogos as $logo)
-                                        <img src="{{ $logo->logo_url }}"
-                                            alt="{{ $logo->alt_text ?: $logo->company_name }}"
+                                    @if ($logoCount < 6)
+                                        <img src="{{ $logo->logo_url }}" alt="{{ $logo->alt_text ?: $logo->company_name }}"
                                             title="{{ $logo->company_name }}"
-                                            class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                            class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                        @php $logoCount++; @endphp
+                                    @endif
+                                @endforeach
+                                @if ($logoCount < 6 && isset($bottomRowLogos) && $bottomRowLogos->count() > 0)
+                                    @foreach ($bottomRowLogos as $logo)
+                                        @if ($logoCount < 6)
+                                            <img src="{{ $logo->logo_url }}"
+                                                alt="{{ $logo->alt_text ?: $logo->company_name }}"
+                                                title="{{ $logo->company_name }}"
+                                                class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                            @php $logoCount++; @endphp
+                                        @endif
                                     @endforeach
                                 @endif
                             @else
-                                <!-- Fallback logos if no data -->
+                                <!-- Fallback logos if no data - Exactly 6 logos -->
                                 <img src="https://logo.clearbit.com/google.com" alt="Google"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/microsoft.com" alt="Microsoft"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/apple.com" alt="Apple"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/amazon.com" alt="Amazon"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/netflix.com" alt="Netflix"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/spotify.com" alt="Spotify"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/tesla.com" alt="Tesla"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/meta.com" alt="Meta"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/adobe.com" alt="Adobe"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/slack.com" alt="Slack"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/zoom.us" alt="Zoom"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/shopify.com" alt="Shopify"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                             @endif
                         </div>
                         <!-- Duplicate set for seamless loop -->
-                        <div class="flex space-x-8 flex-shrink-0">
+                        <div class="flex space-x-12 flex-shrink-0">
                             @if (isset($topRowLogos) && $topRowLogos->count() > 0)
+                                @php $logoCount = 0; @endphp
                                 @foreach ($topRowLogos as $logo)
-                                    <img src="{{ $logo->logo_url }}" alt="{{ $logo->alt_text ?: $logo->company_name }}"
-                                        title="{{ $logo->company_name }}"
-                                        class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                @endforeach
-                                @if (isset($bottomRowLogos) && $bottomRowLogos->count() > 0)
-                                    @foreach ($bottomRowLogos as $logo)
-                                        <img src="{{ $logo->logo_url }}"
-                                            alt="{{ $logo->alt_text ?: $logo->company_name }}"
+                                    @if ($logoCount < 6)
+                                        <img src="{{ $logo->logo_url }}" alt="{{ $logo->alt_text ?: $logo->company_name }}"
                                             title="{{ $logo->company_name }}"
-                                            class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                            class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                        @php $logoCount++; @endphp
+                                    @endif
+                                @endforeach
+                                @if ($logoCount < 6 && isset($bottomRowLogos) && $bottomRowLogos->count() > 0)
+                                    @foreach ($bottomRowLogos as $logo)
+                                        @if ($logoCount < 6)
+                                            <img src="{{ $logo->logo_url }}"
+                                                alt="{{ $logo->alt_text ?: $logo->company_name }}"
+                                                title="{{ $logo->company_name }}"
+                                                class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                            @php $logoCount++; @endphp
+                                        @endif
                                     @endforeach
                                 @endif
                             @else
-                                <!-- Fallback logos if no data -->
+                                <!-- Fallback logos if no data - Exactly 6 logos -->
                                 <img src="https://logo.clearbit.com/google.com" alt="Google"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/microsoft.com" alt="Microsoft"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/apple.com" alt="Apple"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/amazon.com" alt="Amazon"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/netflix.com" alt="Netflix"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                                 <img src="https://logo.clearbit.com/spotify.com" alt="Spotify"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/tesla.com" alt="Tesla"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/meta.com" alt="Meta"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/adobe.com" alt="Adobe"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/slack.com" alt="Slack"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/zoom.us" alt="Zoom"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
-                                <img src="https://logo.clearbit.com/shopify.com" alt="Shopify"
-                                    class="h-10 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                                    class="h-16 w-auto opacity-60 hover:opacity-100 transition-opacity" />
                             @endif
                         </div>
                     </div>
