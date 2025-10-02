@@ -291,7 +291,18 @@
                                     {{ number_format($payment->nominal, 0, ',', '.') }}
                                 </td>
                                 <td class="px-4 py-2 border-b border-gray-200">
-                                    {{ $payment->paymentMethod->name ?? 'N/A' }}</td>
+                                    @if($payment->paymentMethod)
+                                        <div>
+                                            <span class="font-medium">{{ $payment->paymentMethod->name }}</span>
+                                            @if($payment->paymentMethod->no_rekening)
+                                                <br>
+                                                <span class="text-sm text-gray-600">{{ $payment->paymentMethod->no_rekening }}</span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
                                 <td class="px-4 py-2 border-b border-gray-200">{{ $payment->keterangan }}</td>
                             </tr>
                         @empty
@@ -348,7 +359,7 @@
                                     {{ ucwords(strtolower($expense->note ?? 'N/A')) }}
                                 </td>
                                 <td class="px-4 py-2 border-b border-gray-200">
-                                    {{ $expense->no_nd ? 'ND-0' . $expense->no_nd : '-' }}
+                                    {{ $expense->no_nd ? '' . $expense->no_nd : '-' }}
                                 </td>
                                 <td class="text-right px-4 py-2 border-b border-gray-200">Rp
                                     {{ number_format($expense->amount ?? 0, 0, ',', '.') }}
