@@ -172,7 +172,6 @@ class ExpenseResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ])
@@ -397,7 +396,6 @@ class ExpenseResource extends Resource
         return [
             'index' => Pages\ListExpenses::route('/'),
             'create' => Pages\CreateExpense::route('/create'),
-            'edit' => Pages\EditExpense::route('/{record}/edit'),
         ];
     }
 
