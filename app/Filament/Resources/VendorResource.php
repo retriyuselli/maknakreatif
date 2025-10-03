@@ -52,7 +52,7 @@ class VendorResource extends Resource
                                                 Forms\Components\TextInput::make('name')
                                                     ->required()
                                                     ->unique(ignoreRecord: true)
-                                                    ->live(debounce: 500)
+                                                    // ->live(debounce: 500)
                                                     ->afterStateUpdated(function ($state, Forms\Set $set, ?Vendor $record) {
                                                         // Add null check for $state
                                                         if ($state === null) {
