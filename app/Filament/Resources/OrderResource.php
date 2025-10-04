@@ -291,7 +291,8 @@ class OrderResource extends Resource
                             ->numeric()
                             ->prefix('Rp. ')
                             ->readOnly()
-                            ->label('Penambahan (Coming Soon)')
+                            ->label('Penambahan Harga')
+                            ->helperText('Auto-calculated from selected products penambahan publish price')
                             ->mask(RawJs::make('$money($input)'))
                             ->stripCharacters(',')
                             ->reactive()
@@ -337,7 +338,7 @@ class OrderResource extends Resource
                                 Forms\Components\TextInput::make('grand_total')
                                     ->label('Grand Total')
                                     ->readOnly()
-                                    ->helperText('Grand Total (Paket Awal - Pengurangan)')
+                                    ->helperText('Grand Total = Total Paket + Penambahan - Promo - Pengurangan')
                                     ->default(0)
                                     ->numeric()
                                     ->dehydrated(true)
@@ -1629,6 +1630,7 @@ class OrderResource extends Resource
                 // $get relatif terhadap parent dari repeater (dalam kasus ini, Wizard\Step 'Payment Details')
                 $orderItems = $get('items') ?? []; // 'items' adalah nama repeater
                 $calculatedProductPengurangan = 0;
+                $calculatedProductPenambahan = 0;
                 $calculatedTotalPrice = 0;
 
                 if (is_array($orderItems)) {
@@ -1638,6 +1640,8 @@ class OrderResource extends Resource
                             if ($product) {
                                 // Akumulasi total pengurangan dari produk (kuantitas * pengurangan produk)
                                 $calculatedProductPengurangan += $item['quantity'] * ($product->pengurangan ?? 0);
+                                // Akumulasi total penambahan dari produk (kuantitas * penambahan_publish produk)
+                                $calculatedProductPenambahan += $item['quantity'] * ($product->penambahan_publish ?? 0);
                                 // Akumulasi total harga berdasarkan harga jual produk (kuantitas * harga produk)
                                 $calculatedTotalPrice += $item['quantity'] * ($product->product_price ?? 0);
                             }
@@ -1646,12 +1650,12 @@ class OrderResource extends Resource
                 }
 
                 $set('pengurangan', $calculatedProductPengurangan); // Mengatur field 'pengurangan' di form Order
+                $set('penambahan', $calculatedProductPenambahan); // Mengatur field 'penambahan' dari penambahan_publish produk
                 $set('total_price', $calculatedTotalPrice); // Mengatur field 'total_price' di form Order
 
                 // Hitung ulang grand_total berdasarkan nilai baru
-                $penambahan = self::safeFloatVal($get('penambahan'));
                 $promo = self::safeFloatVal($get('promo'));
-                $grandTotal = $calculatedTotalPrice + $penambahan - $promo - $calculatedProductPengurangan;
+                $grandTotal = $calculatedTotalPrice + $calculatedProductPenambahan - $promo - $calculatedProductPengurangan;
                 $set('grand_total', $grandTotal); // Mengatur field 'grand_total' di form Order
             });
     }
@@ -1667,6 +1671,7 @@ class OrderResource extends Resource
 
         $calculatedTotalPrice = 0;
         $calculatedProductPengurangan = 0;
+        $calculatedProductPenambahan = 0;
 
         foreach ($selectedProducts as $item) {
             $productId = $item['product_id'];
@@ -1676,20 +1681,22 @@ class OrderResource extends Resource
             if (isset($productsFromDb[$productId]) && isset($productsFromDb[$productId]->price)) {
                 $productPrice = self::safeFloatVal($productsFromDb[$productId]->product_price ?? 0);
                 $productPengurangan = self::safeFloatVal($productsFromDb[$productId]->pengurangan ?? 0);
+                $productPenambahanPublish = self::safeFloatVal($productsFromDb[$productId]->penambahan_publish ?? 0);
                 
                 $calculatedTotalPrice += $productPrice * $quantity;
                 $calculatedProductPengurangan += $productPengurangan * $quantity;
+                $calculatedProductPenambahan += $productPenambahanPublish * $quantity;
             }
         }
 
         $set('total_price', $calculatedTotalPrice);
         $set('pengurangan', $calculatedProductPengurangan); // Set field 'pengurangan'
+        $set('penambahan', $calculatedProductPenambahan); // Set field 'penambahan' from product's penambahan_publish
 
         // Recalculate grand_total
-        $penambahan = self::safeFloatVal($get('penambahan'));
         $promo = self::safeFloatVal($get('promo'));
-        // Gunakan $calculatedProductPengurangan yang baru dihitung
-        $grandTotal = $calculatedTotalPrice + $penambahan - $promo - $calculatedProductPengurangan;
+        // Gunakan $calculatedProductPengurangan dan $calculatedProductPenambahan yang baru dihitung
+        $grandTotal = $calculatedTotalPrice + $calculatedProductPenambahan - $promo - $calculatedProductPengurangan;
         $set('grand_total', $grandTotal);
 
         // Panggil method baru untuk update sisa dan is_paid

@@ -26,7 +26,7 @@ class ProductDisplayController extends Controller
     public function details(Product $product, string $action)
     {
         // Eager load necessary relationships if needed
-        $product->load('category', 'items.vendor');
+        $product->load(['category', 'items.vendor', 'pengurangans', 'penambahanHarga.vendor']);
 
         if ($action === 'preview' || $action === 'print') {
             // Return a view for previewing/printing
@@ -51,7 +51,7 @@ class ProductDisplayController extends Controller
     public function downloadPdf(Product $product)
     {
         // Load relasi yang mungkin dibutuhkan di view PDF (opsional tapi bagus untuk performa)
-        $product->load(['category', 'items.vendor']);
+        $product->load(['category', 'items.vendor', 'pengurangans', 'penambahanHarga.vendor']);
 
         // Data yang akan dikirim ke view PDF
         $data = [

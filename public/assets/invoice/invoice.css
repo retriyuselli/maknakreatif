@@ -32,6 +32,18 @@
     color: #4a5568;
 }
 
+/* Dark mode styles for status bayar */
+@media (prefers-color-scheme: dark) {
+    .status-bayar {
+        color: #ffffff; /* white - lebih terang */
+    }
+}
+
+/* Dark mode with class selector for Filament */
+.dark .status-bayar {
+    color: #ffffff; /* white - lebih terang */
+}
+
 .item-pengurangan-table {
     margin-top: 0.25rem;
     font-size: 14px;
@@ -73,6 +85,26 @@
 .progress-bar-percentage {
     font-weight: 600; /* font-semibold */
     color: purple; /* text-purple-600 */
+}
+
+/* Dark mode styles for progress bar */
+@media (prefers-color-scheme: dark) {
+    .progress-bar-label {
+        color: #f9fafb; /* text-gray-50 - lebih terang */
+    }
+
+    .progress-bar-track {
+        background-color: #374151; /* bg-gray-700 */
+        border-color: #4b5563; /* border-gray-600 */
+    }
+} /* Dark mode with class selector for Filament */
+.dark .progress-bar-label {
+    color: #f9fafb; /* text-gray-50 - lebih terang */
+}
+
+.dark .progress-bar-track {
+    background-color: #374151; /* bg-gray-700 */
+    border-color: #4b5563; /* border-gray-600 */
 }
 
 .progress-bar-track {
@@ -131,6 +163,26 @@
     line-height: 1.4;
 }
 
+/* Dark mode styles for section headers */
+@media (prefers-color-scheme: dark) {
+    .section-header {
+        color: #ffffff; /* white - lebih terang */
+        border-color: #4b5563; /* border-gray-600 */
+    }
+
+    .section-description {
+        color: #f3f4f6; /* text-gray-100 - lebih terang */
+    }
+} /* Dark mode with class selector for Filament */
+.dark .section-header {
+    color: #ffffff; /* white - lebih terang */
+    border-color: #4b5563; /* border-gray-600 */
+}
+
+.dark .section-description {
+    color: #f3f4f6; /* text-gray-100 - lebih terang */
+}
+
 /* Show More Button Style */
 .show-more-button {
     background-color: #f3f4f6; /* bg-gray-100 */
@@ -146,6 +198,28 @@
 
 .show-more-button:hover {
     background-color: #e5e7eb; /* bg-gray-200 */
+}
+
+/* Dark mode styles for show more button */
+@media (prefers-color-scheme: dark) {
+    .show-more-button {
+        background-color: #374151; /* bg-gray-700 */
+        color: #ffffff; /* white - lebih terang */
+        border-color: #4b5563; /* border-gray-600 */
+    }
+
+    .show-more-button:hover {
+        background-color: #4b5563; /* bg-gray-600 */
+    }
+} /* Dark mode with class selector for Filament */
+.dark .show-more-button {
+    background-color: #374151; /* bg-gray-700 */
+    color: #ffffff; /* white - lebih terang */
+    border-color: #4b5563; /* border-gray-600 */
+}
+
+.dark .show-more-button:hover {
+    background-color: #4b5563; /* bg-gray-600 */
 }
 
 /* Profit/Loss Card Styles */
@@ -204,4 +278,62 @@
 }
 .profit-loss-card.is-loss .profit-loss-card-amount {
     color: #991b1b;
+}
+
+/* Dark mode styles for profit/loss card */
+@media (prefers-color-scheme: dark) {
+    .profit-loss-card.is-profit {
+        background-color: #064e3b; /* dark green background */
+        border-color: #059669; /* green border */
+    }
+    .profit-loss-card.is-loss {
+        background-color: #7f1d1d; /* dark red background */
+        border-color: #dc2626; /* red border */
+    }
+    .profit-loss-card.is-profit .profit-loss-card-title {
+        color: #ffffff; /* white - lebih terang */
+    }
+    .profit-loss-card.is-loss .profit-loss-card-title {
+        color: #ffffff; /* white - lebih terang */
+    }
+    .profit-loss-card.is-profit .profit-loss-card-description {
+        color: #f3f4f6; /* text-gray-100 - lebih terang */
+    }
+    .profit-loss-card.is-loss .profit-loss-card-description {
+        color: #f3f4f6; /* text-gray-100 - lebih terang */
+    }
+    .profit-loss-card.is-profit .profit-loss-card-amount {
+        color: #ffffff; /* white - lebih terang */
+    }
+    .profit-loss-card.is-loss .profit-loss-card-amount {
+        color: #ffffff; /* white - lebih terang */
+    }
+}
+
+/* Dark mode with class selector for Filament */
+.dark .profit-loss-card.is-profit {
+    background-color: #064e3b; /* dark green background */
+    border-color: #059669; /* green border */
+}
+.dark .profit-loss-card.is-loss {
+    background-color: #7f1d1d; /* dark red background */
+    border-color: #dc2626; /* red border */
+}
+.dark .profit-loss-card.is-profit .profit-loss-card-title {
+    color: #ffffff; /* white - lebih terang */
+}
+.dark .profit-loss-card.is-loss .profit-loss-card-title {
+    color: #ffffff; /* white - lebih terang */
+}
+.dark .profit-loss-card.is-profit .profit-loss-card-description {
+    color: #f3f4f6; /* text-gray-100 - lebih terang */
+}
+.dark .profit-loss-card.is-loss .profit-loss-card-description {
+    color: #f3f4f6; /* text-gray-100 - lebih terang */
+}
+.dark .profit-loss-card.is-profit .profit-loss-card-amount {
+    color: #ffffff; /* white - lebih terang */
+}
+.dark .profit-loss-card.is-loss .profit-loss-card-amount {
+    color: #ffffff; /* white - lebih terang */
 }

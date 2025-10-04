@@ -128,7 +128,7 @@ class ProductResource extends Resource
                                         ->dehydrated()
                                         ->mask(RawJs::make('$money($input)'))
                                         ->stripCharacters(',')
-                                        ->helperText('Total Publish Price - Total Pengurangan'),
+                                        ->helperText('Total Publish Price - Total Pengurangan + Total Penambahan'),
     
                                     Forms\Components\TextInput::make('stock')
                                         ->required()
@@ -164,7 +164,7 @@ class ProductResource extends Resource
                                     ->collapsible(),
                             ]),
     
-                        Tab::make('Facilities & Vendors')
+                        Tab::make('Basic Facilities')
                             ->icon('heroicon-o-cube')
                             ->schema([
                                 Grid::make(2)
@@ -215,9 +215,44 @@ class ProductResource extends Resource
                                 self::getDiscountRepeater(),
                             ]),
                         Tab::make('Penambahan Harga')
-                            ->icon('heroicon-o-receipt-refund') 
-                            ->label('Penambahan Harga (Coming Soon)')
-                            ->schema([]),
+                            ->icon('heroicon-o-plus-circle') 
+                            ->label('Penambahan Harga (Jika Ada)')   
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('penambahan_publish')
+                                            ->label('Total Publish Price')
+                                            ->readOnly() // supaya tidak bisa diketik
+                                            ->default(0)
+                                            ->numeric()
+                                            ->prefix('Rp')
+                                            ->mask(RawJs::make('$money($input)'))
+                                            ->stripCharacters(',')
+                                            ->helperText('Automatically calculated from additional publish prices')
+                                            ->afterStateHydrated(function ($component, $state, $record) {
+                                                if ($record) {
+                                                    $total = $record->penambahanHarga->sum('harga_publish');
+                                                    $component->state($total);
+                                                }
+                                            }),
+                                        Forms\Components\TextInput::make('penambahan_vendor')
+                                            ->label('Total Vendor Price')
+                                            ->readOnly() // supaya tidak bisa diketik
+                                            ->default(0)
+                                            ->numeric()
+                                            ->prefix('Rp')
+                                            ->mask(RawJs::make('$money($input)'))
+                                            ->stripCharacters(',')
+                                            ->helperText('Automatically calculated from additional vendor prices')
+                                            ->afterStateHydrated(function ($component, $state, $record) {
+                                                if ($record) {
+                                                    $total = $record->penambahanHarga->sum('harga_vendor');
+                                                    $component->state($total);
+                                                }
+                                            }),
+                                    ]),
+                                self::getAdditionRepeater(),
+                            ]),
                     ])
                     ->columnSpanFull(),
             ]);
@@ -311,6 +346,16 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('pengurangan')
                     ->label('Pengurangan')
                     ->getStateUsing(fn ($record) => $record->pengurangans->sum('amount'))
+                    ->prefix('Rp ')
+                    ->numeric()
+                    ->alignEnd()
+                    ->sortable()
+                    ->badge()
+                    ->color(fn ($state) => $state == 0 ? 'warning' : 'danger'),
+
+                Tables\Columns\TextColumn::make('penambahan')
+                    ->label('Penambahan Publish')
+                    ->getStateUsing(fn ($record) => $record->penambahanHarga->sum('harga_publish'))
                     ->prefix('Rp ')
                     ->numeric()
                     ->alignEnd()
@@ -689,6 +734,26 @@ class ProductResource extends Resource
         }
     }
 
+    protected static function updateAdditionVendorData(Set $set, $vendorId): void
+    {
+        $vendor = Vendor::find($vendorId);
+        if ($vendor) {
+            $set('harga_publish', $vendor->harga_publish);
+            $set('harga_vendor', $vendor->harga_vendor);
+            $set('description', $vendor->description);
+        }
+    }
+
+    protected static function calculateAdditionPrices(Get $get, Set $set): void
+    {
+        // Get base values for addition items
+        $harga_publish = (float)(preg_replace('/[^0-9.]/', '', $get('harga_publish') ?? 0));
+        $harga_vendor = (float)(preg_replace('/[^0-9.]/', '', $get('harga_vendor') ?? 0));
+        
+        // Update the total addition prices
+        self::calculateTotalAdditionPrice($get, $set);
+    }
+
     protected static function calculatePrices(Get $get, Set $set): void
     {
         // Get base values
@@ -738,16 +803,67 @@ class ProductResource extends Resource
     }
 
     /**
-     * Updates the final sell price (Product.price) based on Product.product_price and Product.pengurangan.
-     * Called when Product.product_price (from vendors) or Product.pengurangan (from discounts) changes.
+     * Calculate the total addition prices from all addition items.
+     * Triggered by changes in the addition repeater.
+     */
+    protected static function calculateTotalAdditionPrice(Get $get, Set $set): void
+    {
+        // Get all addition items from the repeater
+        $additionItems = $get('../../penambahanHarga') ?? [];
+
+        // Calculate total publish price from all addition items' harga_publish values
+        $total_publish_price = collect($additionItems)
+            ->sum(function ($item) {
+                $hargaPublishStr = $item['harga_publish'] ?? '0';
+                if (!is_string($hargaPublishStr) && !is_numeric($hargaPublishStr)) {
+                    $hargaPublishStr = '0';
+                }
+                return (float)preg_replace('/[^0-9.]/', '', (string)$hargaPublishStr);
+            });
+
+        // Calculate total vendor price from all addition items' harga_vendor values
+        $total_vendor_price = collect($additionItems)
+            ->sum(function ($item) {
+                $hargaVendorStr = $item['harga_vendor'] ?? '0';
+                if (!is_string($hargaVendorStr) && !is_numeric($hargaVendorStr)) {
+                    $hargaVendorStr = '0';
+                }
+                return (float)preg_replace('/[^0-9.]/', '', (string)$hargaVendorStr);
+            });
+
+        // Set the addition totals
+        $set('../../penambahan_publish', $total_publish_price);
+        $set('../../penambahan_vendor', $total_vendor_price);
+        
+        self::updateFinalProductPriceWithAdditions($get, $set);
+    }
+
+    /**
+     * Updates the final sell price (Product.price) based on Product.product_price, Product.pengurangan, and Product.penambahan_publish.
+     * Called when Product.product_price (from vendors), Product.pengurangan (from discounts), or Product.penambahan_publish (from additions) changes.
      */
     protected static function updateFinalProductPrice(Get $get, Set $set): void
     {
         // Paths are relative to the repeater item context that initiated the chain of updates.
         $productPriceFromVendors = (float)preg_replace('/[^0-9.]/', '', $get('../../product_price') ?? '0');
         $totalPenguranganFromDiscounts = (float)preg_replace('/[^0-9.]/', '', $get('../../pengurangan') ?? '0');
+        $totalPenambahanFromAdditions = (float)preg_replace('/[^0-9.]/', '', $get('../../penambahan_publish') ?? '0');
 
-        $finalPrice = $productPriceFromVendors - $totalPenguranganFromDiscounts;
+        $finalPrice = $productPriceFromVendors - $totalPenguranganFromDiscounts + $totalPenambahanFromAdditions;
+        $set('../../price', $finalPrice); // Sets Product.price (in Basic Information tab)
+    }
+
+    /**
+     * Updates the final sell price specifically from addition changes.
+     */
+    protected static function updateFinalProductPriceWithAdditions(Get $get, Set $set): void
+    {
+        // Paths are relative to the repeater item context that initiated the chain of updates.
+        $productPriceFromVendors = (float)preg_replace('/[^0-9.]/', '', $get('../../product_price') ?? '0');
+        $totalPenguranganFromDiscounts = (float)preg_replace('/[^0-9.]/', '', $get('../../pengurangan') ?? '0');
+        $totalPenambahanFromAdditions = (float)preg_replace('/[^0-9.]/', '', $get('../../penambahan_publish') ?? '0');
+
+        $finalPrice = $productPriceFromVendors - $totalPenguranganFromDiscounts + $totalPenambahanFromAdditions;
         $set('../../price', $finalPrice); // Sets Product.price (in Basic Information tab)
     }
 
@@ -803,10 +919,129 @@ class ProductResource extends Resource
 
                 // Now, calculate and set the final 'price' field (in "Basic Information" Tab)
                 $productPriceVal = (float) preg_replace('/[^0-9.]/', '', $get('../product_price') ?? '0'); // Get 'product_price' from other Tab
-                $finalPrice = $productPriceVal - $totalPengurangan;
+                $penambahanVal = (float) preg_replace('/[^0-9.]/', '', $get('../penambahan') ?? '0'); // Get 'penambahan' from other Tab
+                $finalPrice = $productPriceVal - $totalPengurangan + $penambahanVal;
                 $set('../price', $finalPrice); // Set 'price' in other Tab
             })
             ->addActionLabel('Add Discount')
+            ->columns(1);
+    }
+
+    protected static function getAdditionRepeater()
+    {
+        return Forms\Components\Repeater::make('penambahanHarga')
+            ->relationship()
+            ->schema([
+                Forms\Components\Grid::make(4)
+                    ->schema([
+                        Forms\Components\Select::make('vendor_id')
+                            ->relationship('vendor', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Select a vendor')
+                            ->required()
+                            ->live()
+                            ->reactive()
+                            ->afterStateHydrated(function (Set $set, Get $get, $state) {
+                                if ($state) {
+                                    self::updateAdditionVendorData($set, $state);
+                                    self::calculateAdditionPrices($get, $set);
+                                }
+                            })
+                            ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                if ($state) {
+                                    self::updateAdditionVendorData($set, $state);
+                                    self::calculateAdditionPrices($get, $set);
+                                }
+                            })
+                            ->columnSpan([
+                                'md' => 2,
+                            ]),
+
+                        Forms\Components\TextInput::make('harga_publish')
+                            ->label('Published Price')
+                            ->prefix('Rp')
+                            ->numeric()
+                            ->reactive()
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                self::calculateAdditionPrices($get, $set);
+                            }),
+
+                        Forms\Components\TextInput::make('harga_vendor')
+                            ->label('Vendor Price')
+                            ->prefix('Rp')
+                            ->numeric()
+                            ->reactive()
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                self::calculateAdditionPrices($get, $set);
+                            }),
+
+                        Forms\Components\RichEditor::make('description')
+                            ->label('Description/Notes')
+                            ->placeholder('Additional notes for this item')
+                            ->columnSpanFull(),
+                    ]),
+            ])
+            ->extraItemActions([
+                Action::make('openVendor')
+                    ->label('Open Vendor')
+                    ->icon('heroicon-m-arrow-top-right-on-square')
+                    ->color('info')
+                    ->url(function (array $arguments, Repeater $component): ?string {
+                        $itemData = $component->getRawItemState($arguments['item']);
+                        $vendorId = $itemData['vendor_id'] ?? null;
+                        if (!$vendorId) {
+                            return null;
+                        }
+                        $vendor = Vendor::find($vendorId);
+                        return $vendor ? VendorResource::getUrl('edit', ['record' => $vendor]) : null;
+                    }, shouldOpenInNewTab: true)
+                    ->hidden(fn (array $arguments, Repeater $component): bool => blank($component->getRawItemState($arguments['item'])['vendor_id'] ?? null)),
+            ])
+            ->defaultItems(0)
+            ->collapsed()
+            ->itemLabel(fn (array $state): ?string => 
+                $state['vendor_id'] 
+                    ? Vendor::find($state['vendor_id'])?->name ?? 'Unnamed Vendor'
+                    : 'New Addition Item'
+            )
+            ->reorderable()
+            ->cloneable()
+            ->afterStateUpdated(function (Get $get, Set $set, $state) { // $state is the array of penambahanHarga
+                // $get is relative to the repeater's parent (the "Penambahan Harga" Tab)
+                $totalPenambahanPublish = collect($state)
+                    ->sum(function ($item) {
+                        $amountStr = $item['harga_publish'] ?? '0';
+                        if (!is_string($amountStr) && !is_numeric($amountStr)) {
+                            $amountStr = '0';
+                        }
+                        return (float) preg_replace('/[^0-9.]/', '', (string) $amountStr);
+                    });
+
+                $totalPenambahanVendor = collect($state)
+                    ->sum(function ($item) {
+                        $amountStr = $item['harga_vendor'] ?? '0';
+                        if (!is_string($amountStr) && !is_numeric($amountStr)) {
+                            $amountStr = '0';
+                        }
+                        return (float) preg_replace('/[^0-9.]/', '', (string) $amountStr);
+                    });
+
+                // Set the 'penambahan_publish' and 'penambahan_vendor' fields in the current Tab ("Penambahan Harga")
+                $set('penambahan_publish', $totalPenambahanPublish);
+                $set('penambahan_vendor', $totalPenambahanVendor);
+
+                // Now, calculate and set the final 'price' field (in "Basic Information" Tab)
+                $productPriceVal = (float) preg_replace('/[^0-9.]/', '', $get('../product_price') ?? '0'); // Get 'product_price' from other Tab
+                $penguranganVal = (float) preg_replace('/[^0-9.]/', '', $get('../pengurangan') ?? '0'); // Get 'pengurangan' from other Tab
+                $finalPrice = $productPriceVal - $penguranganVal + $totalPenambahanPublish;
+                $set('../price', $finalPrice); // Set 'price' in other Tab
+            })
+            ->addActionLabel('Add Additional Item')
             ->columns(1);
     }
 
@@ -858,7 +1093,7 @@ class ProductResource extends Resource
 
     /**
      * Mutate form data before saving (both create and update).
-     * This method recalculates product_price, pengurangan, and price on the server-side
+     * This method recalculates product_price, pengurangan, penambahan, and price on the server-side
      * based on the submitted repeater data to ensure data integrity.
      *
      * @param  array  $data
@@ -894,8 +1129,23 @@ class ProductResource extends Resource
         }
         $data['pengurangan'] = $calculatedPengurangan;
 
-        // 3. Recalculate final 'price'
-        $data['price'] = $data['product_price'] - $data['pengurangan'];
+        // 3. Recalculate 'penambahan_publish' and 'penambahan_vendor' from 'penambahanHarga' (addition repeater)
+        $calculatedPenambahanPublish = 0;
+        $calculatedPenambahanVendor = 0;
+        if (isset($data['penambahanHarga']) && is_array($data['penambahanHarga'])) {
+            foreach ($data['penambahanHarga'] as $key => $item) {
+                $calculatedPenambahanPublish += $cleanCurrencyValue($item['harga_publish'] ?? '0');
+                $calculatedPenambahanVendor += $cleanCurrencyValue($item['harga_vendor'] ?? '0');
+                
+                // Set amount field to harga_publish for compatibility with database
+                $data['penambahanHarga'][$key]['amount'] = $cleanCurrencyValue($item['harga_publish'] ?? '0');
+            }
+        }
+        $data['penambahan_publish'] = $calculatedPenambahanPublish;
+        $data['penambahan_vendor'] = $calculatedPenambahanVendor;
+
+        // 4. Recalculate final 'price'
+        $data['price'] = $data['product_price'] - $data['pengurangan'] + $data['penambahan_publish'];
 
         return $data;
     }
@@ -963,7 +1213,7 @@ class ProductResource extends Resource
                                     ->collapsible(),
                             ]),
 
-                        Infolists\Components\Tabs\Tab::make('Facilities & Vendors')
+                        Infolists\Components\Tabs\Tab::make('Basic Facilities')
                             ->icon('heroicon-o-cube')
                             ->schema([
                                 Infolists\Components\Section::make()
@@ -1082,6 +1332,70 @@ class ProductResource extends Resource
                                     ->grid(1)
                                     ->contained(true),
                             ]),
+
+                        Infolists\Components\Tabs\Tab::make('Penambahan Harga')
+                            ->icon('heroicon-o-plus-circle')
+                            ->label('Penambahan Harga (Jika Ada)')
+                            ->schema([
+                                Infolists\Components\Grid::make(2)
+                                    ->schema([
+                                        Infolists\Components\TextEntry::make('penambahan_publish')
+                                            ->label('Total Penambahan Publish Price')
+                                            ->color('success') // Warna untuk total penambahan
+                                            ->weight('bold')
+                                            ->prefix('Rp ')
+                                            ->numeric()
+                                            ->placeholder('-')
+                                            ->state(function (Product $record): float {
+                                                // Ambil dari kolom penambahan_publish atau hitung dari relasi harga_publish
+                                                return $record->penambahan_publish ?? $record->penambahanHarga()->sum('harga_publish');
+                                            })
+                                            ->helperText('Sum of all additional publish prices'),
+                                        Infolists\Components\TextEntry::make('penambahan_vendor')
+                                            ->label('Total Penambahan Vendor Price')
+                                            ->color('warning') // Warna untuk vendor price
+                                            ->weight('bold')
+                                            ->prefix('Rp ')
+                                            ->numeric()
+                                            ->placeholder('-')
+                                            ->state(function (Product $record): float {
+                                                // Ambil dari kolom penambahan_vendor atau hitung dari relasi harga_vendor
+                                                return $record->penambahan_vendor ?? $record->penambahanHarga()->sum('harga_vendor');
+                                            })
+                                            ->helperText('Sum of all additional vendor prices'),
+                                    ]),
+                                Infolists\Components\RepeatableEntry::make('penambahanHarga')
+                                    ->label('Additional Items')
+                                    ->schema([
+                                        Infolists\Components\TextEntry::make('vendor.name')
+                                            ->label('Vendor Name')
+                                            ->placeholder('-')
+                                            ->weight('bold')
+                                            ->color('info'),
+                                        Infolists\Components\TextEntry::make('harga_publish')
+                                            ->label('Publish Price')
+                                            ->color('success') // Warna untuk harga publish
+                                            ->weight('bold')
+                                            ->prefix('Rp ')
+                                            ->numeric()
+                                            ->placeholder('-'),
+                                        Infolists\Components\TextEntry::make('harga_vendor')
+                                            ->label('Vendor Price')
+                                            ->color('warning') // Warna untuk harga vendor
+                                            ->weight('bold')
+                                            ->prefix('Rp ')
+                                            ->numeric()
+                                            ->placeholder('-'),
+                                        Infolists\Components\TextEntry::make('description')
+                                            ->label('Description')
+                                            ->columnSpanFull()
+                                            ->html()
+                                            ->placeholder('No description.'),
+                                    ])
+                                    ->columns(3)
+                                    ->grid(1)
+                                    ->contained(true),
+                            ]),
                         Infolists\Components\Tabs\Tab::make('Timestamps')
                             ->icon('heroicon-o-clock')
                             ->schema([
@@ -1089,11 +1403,27 @@ class ProductResource extends Resource
                                     ->label('Created On')
                                     ->dateTime(),
                                 Infolists\Components\TextEntry::make('updated_at')
+                                    ->label('Last Modified')
                                     ->dateTime(),
                                 Infolists\Components\TextEntry::make('user.name') // Jika ada relasi user
                                     ->label('Created by')
                                     ->placeholder('-')
                                     ->visible(fn (Product $record) => $record->user !== null),
+                                Infolists\Components\TextEntry::make('lastEditedBy.name')
+                                    ->label('Last Edited By')
+                                    ->placeholder('-')
+                                    ->state(function (Product $record): string {
+                                        if ($record->lastEditedBy) {
+                                            return $record->lastEditedBy->name;
+                                        }
+                                        
+                                        // Fallback untuk data lama yang belum memiliki track editor
+                                        if ($record->updated_at && $record->created_at && $record->updated_at->ne($record->created_at)) {
+                                            return 'Modified on ' . $record->updated_at->format('M d, Y H:i');
+                                        }
+                                        return 'No modifications yet';
+                                    })
+                                    ->helperText('Track who made the last changes to this product'),
                             ])->columns(2),
                     ])
                     ->columnSpanFull(),

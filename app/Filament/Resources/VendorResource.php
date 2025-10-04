@@ -142,8 +142,7 @@ class VendorResource extends Resource
                                                     ->columnSpanFull()
                                                     ->minLength(10)
                                                     ->required()
-                                                    ->label('Description')
-                                                    ->maxLength(20000),
+                                                    ->label('Description'),
                                             ]),
                                     ])
                                     ->collapsible(),

@@ -5,19 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Details - {{ $product->name }}</title>
-    {{-- Impor Font Poppins dari Google Fonts (untuk tampilan browser) --}}
+    {{-- Impor Font Noto Sans dari Google Fonts (untuk tampilan browser) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     {{-- Sertakan Tailwind CSS --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Konfigurasi dasar Tailwind untuk font Poppins
+        // Konfigurasi dasar Tailwind untuk font Noto Sans
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        'sans': ['Poppins', 'sans-serif'],
+                        'sans': ['Noto Sans', 'sans-serif'],
                     },
                 }
             }
@@ -39,8 +39,8 @@
 
             /* --- PENGATURAN BODY & FONT DASAR --- */
             body {
-                font-family: 'Poppins', Arial, sans-serif !important;
-                /* Font utama, fallback ke Arial jika Poppins tidak termuat */
+                font-family: 'Noto Sans', Arial, sans-serif !important;
+                /* Font utama, fallback ke Arial jika Noto Sans tidak termuat */
                 background-color: #ffffff !important;
                 /* Paksa background putih */
                 color: #000000 !important;
@@ -326,7 +326,7 @@
                                 <div class="font-bold uppercase text-[13px]">
                                     {{ $item->vendor->name ?? 'Vendor Tidak Diketahui' }}</div>
                                 @if ($item->description)
-                                    <div class="text-[13px] list-disc list-inside mt-1 ml-7 py-2">{!! strip_tags($item->description, '<li><strong><em><ul><li><br><span><div>') !!}</div>
+                                    <div class="text-sm text-slate-500 ml-10">{!! strip_tags($item->description, '<p><b><strong><em><ul><li><br><span><div>') !!}</div>
                                 @endif
                             </td>
                             <td class="border border-slate-300 px-4 text-[13px] py-3 text-right align-top">
@@ -346,41 +346,89 @@
             </table>
         </div>
 
+        {{-- Detail Penambahan --}}
+        @if(($product->penambahanHarga ?? collect())->count() > 0)
+            <div class="mt-8 border border-slate-200 p-4 sm:p-5 rounded-lg bg-white shadow-sm">
+                <h3 class="text-sm font-semibold mb-5">Penambahan</h3>
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <th
+                            class="border text-[13px] px-4 py-3 text-center bg-slate-100 font-bold uppercase tracking-wider"
+                            style="width: 6%;">No</th>
+                        <th
+                            class="border text-[13px] px-4 py-3 text-left bg-slate-100 font-bold uppercase tracking-wider">
+                            Description</th>
+                        <th class="border text-[13px] px-4 py-3 text-right bg-slate-100 font-bold uppercase tracking-wider"
+                            style="width: 15%;">Vendor</th>
+                        <th class="border text-[13px] px-4 py-3 text-right bg-slate-100 font-bold uppercase tracking-wider"
+                            style="width: 15%;">Public</th>
+                    </thead>
+                    <tbody>
+                        @foreach($product->penambahanHarga as $index => $addition)
+                            <tr class="odd:bg-white even:bg-slate-50/70 hover:bg-indigo-50/70 transition-colors duration-150 ease-in-out">
+                                <td class="border border-slate-300 px-4 py-3 text-center align-top text-[13px]">
+                                    {{ $index + 1 }}
+                                </td>
+                                <td class="border border-slate-300 px-4 py-3 align-top">
+                                    <div class="font-bold uppercase text-[13px]">
+                                        {{ $addition->vendor->name ?? 'Item Tidak Diketahui' }}</div>
+                                    @if ($addition->description)
+                                        <div class="text-sm text-slate-500 ml-10">{!! strip_tags($addition->description, '<p><b><strong><em><ul><li><br><span><div>') !!}</div>
+                                    @endif
+                                </td>
+                                <td class="border border-slate-300 px-4 py-3 text-right align-top text-[13px]"
+                                    style="width: 15%">
+                                    {{ number_format($addition->harga_vendor ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="border border-slate-300 px-4 py-3 text-right align-top text-[13px]"
+                                    style="width: 15%">
+                                    {{ number_format($addition->harga_publish ?? 0, 0, ',', '.') }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
         {{-- Detail Pengurangan --}}
-        <div class="mt-6 border border-gray-300 p-4 rounded-md bg-gray-50/50">
-            <h3 class="text-sm font-semibold text-gray-800 mb-3">Pengurangan</h3>
-            <table class="w-full border-collapse text-sm">
-                <thead>
-                    <th
-                        class="border text-xs border-slate-300 px-4 py-3 text-left bg-slate-100 font-semibold text-slate-600 uppercase tracking-wider">
-                        Description</th>
-                    <th class="border text-xs border-slate-300 px-4 py-3 text-right bg-slate-100 font-semibold text-slate-600 uppercase tracking-wider"
-                        style="width: 15%;">Value</th>
-                </thead>
-                <tbody>
-                    @forelse($product->pengurangans ?? [] as $discount)
-                        <tr>
-                            <td class="border border-gray-300 p-2 align-top">
-                                <div class="text-xs ml-3 font-semibold text-gray-800">
-                                    {{ $discount->description ?? 'Vendor Tidak Diketahui' }}</div>
-                                @if ($discount->notes)
-                                    <div class="text-xs/5 py-2 text-slate-500 ml-14">{!! strip_tags($discount->notes, '<p><b><strong><em><ul><li><br><span><div>') !!}</div>
-                                @endif
-                            </td>
-                            <td class="border border-slate-300 px-4 py-3 text-right align-top text-xs"
-                                style="width: 18%">
-                                {{ number_format($discount->amount ?? 0, 0, ',', '.') }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="3" class="border border-gray-300 p-3 text-center text-gray-500">Tidak ada
-                                pengurangan yang terdaftar untuk produk ini.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        @if(($product->pengurangans ?? collect())->count() > 0)
+            <div class="mt-8 border border-slate-200 p-4 sm:p-5 rounded-lg bg-white shadow-sm">
+                <h3 class="text-sm font-semibold mb-5">Pengurangan</h3>
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <th
+                            class="border text-[13px] px-4 py-3 text-center bg-slate-100 font-bold uppercase tracking-wider"
+                            style="width: 8%;">No</th>
+                        <th
+                            class="border text-[13px] px-4 py-3 text-left bg-slate-100 font-bold uppercase tracking-wider">
+                            Description</th>
+                        <th class="border text-[13px] px-4 py-3 text-right bg-slate-100 font-bold uppercase tracking-wider"
+                            style="width: 15%;">Value</th>
+                    </thead>
+                    <tbody>
+                        @foreach($product->pengurangans as $index => $discount)
+                            <tr class="odd:bg-white even:bg-slate-50/70 hover:bg-indigo-50/70 transition-colors duration-150 ease-in-out">
+                                <td class="border border-slate-300 px-4 py-3 text-center align-top text-[13px]">
+                                    {{ $index + 1 }}
+                                </td>
+                                <td class="border border-slate-300 px-4 py-3 align-top">
+                                    <div class="font-bold uppercase text-[13px]">
+                                        {{ $discount->description ?? 'Vendor Tidak Diketahui' }}</div>
+                                    @if ($discount->notes)
+                                        <div class="text-sm text-slate-500 ml-10">{!! strip_tags($discount->notes, '<p><b><strong><em><ul><li><br><span><div>') !!}</div>
+                                    @endif
+                                </td>
+                                <td class="border border-slate-300 px-4 py-3 text-right align-top text-[13px]"
+                                    style="width: 18%">
+                                    {{ number_format($discount->amount ?? 0, 0, ',', '.') }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
 
         {{-- Price Calculation --}}
         @php
@@ -400,9 +448,13 @@
             // Hitung total jumlah diskon
             $totalDiscountAmount = ($product->pengurangans ?? collect())->sum('amount');
 
-            // Hitung harga final setelah diskon
-            $finalPriceAfterDiscounts = $basePackagePrice - $totalDiscountAmount;
-            $finalVendorPriceAfterDiscounts = $totalVendorPrice - $totalDiscountAmount;
+            // Hitung total jumlah penambahan
+            $totalAdditionAmount = ($product->penambahanHarga ?? collect())->sum('harga_publish');
+            $totalAdditionVendorAmount = ($product->penambahanHarga ?? collect())->sum('harga_vendor');
+
+            // Hitung harga final setelah diskon dan penambahan
+            $finalPriceAfterDiscounts = $basePackagePrice - $totalDiscountAmount + $totalAdditionAmount;
+            $finalVendorPriceAfterDiscounts = $totalVendorPrice - $totalDiscountAmount + $totalAdditionVendorAmount;
 
             // Hitung Profit & Loss
             $profitAndLoss = $finalPriceAfterDiscounts - $finalVendorPriceAfterDiscounts;
@@ -423,18 +475,30 @@
                         {{ number_format($totalVendorPrice, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
+                    <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Addition Publish
+                        (Penambahan)</strong></td>
+                        <td class="border border-gray-300 p-2 text-right text-green-600 font-semibold"><strong>+
+                            {{ number_format($totalAdditionAmount, 0, ',', '.') }}</strong></td>
+                        </tr>
+                <tr>
+                    <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Addition Vendor
+                        (Penambahan)</strong></td>
+                    <td class="border border-gray-300 p-2 text-right text-green-600 font-semibold"><strong>+
+                            {{ number_format($totalAdditionVendorAmount, 0, ',', '.') }}</strong></td>
+                </tr>
+                <tr>
                     <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Reduction
                             (Pengurangan)</strong></td>
                     <td class="border border-gray-300 p-2 text-right text-red-600 font-semibold"><strong>-
                             {{ number_format($totalDiscountAmount, 0, ',', '.') }}</strong></td>
                 </tr>
                 <tr>
-                    <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Paket Publish (Publish - Reduction)</strong></td>
+                    <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Paket Publish (Publish + Addition Publish - Reduction)</strong></td>
                     <td class="border border-gray-300 p-2 text-right font-bold text-xs"><strong>
                             {{ number_format($finalPriceAfterDiscounts, 0, ',', '.') }}</strong></td>
                 </tr>
-                 <tr>
-                    <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Paket Vendor (Vendor - Reduction)</strong></td>
+                <tr>
+                    <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Paket Vendor (Vendor + Addition Vendor - Reduction)</strong></td>
                     <td class="border border-gray-300 p-2 text-right font-bold text-xs"><strong>
                             {{ number_format($finalVendorPriceAfterDiscounts, 0, ',', '.') }}</strong></td>
                 </tr>

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class Product extends Model
@@ -25,6 +28,10 @@ class Product extends Model
         'image',
         'is_approved',
         'pengurangan',
+        'penambahan',
+        'penambahan_publish',
+        'penambahan_vendor',
+        'last_edited_by_id',
     ];
 
     protected $casts = [
@@ -32,8 +39,22 @@ class Product extends Model
         'is_approved' => 'boolean',
         'product_price' => 'decimal:2',
         'pengurangan' => 'decimal:2',
-        'price' => 'decimal:2', // Harga akhir setelah pengurangan
+        'penambahan' => 'decimal:2',
+        'penambahan_publish' => 'decimal:2',
+        'penambahan_vendor' => 'decimal:2',
+        'price' => 'decimal:2', // Harga akhir setelah pengurangan + penambahan
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            if (Auth::check()) {
+                $model->last_edited_by_id = Auth::id();
+            }
+        });
+    }
 
     public function pengurangans()
     {
@@ -50,6 +71,11 @@ class Product extends Model
         return $this->hasMany(ProductPengurangan::class);
     }
 
+    public function penambahanHarga(): HasMany
+    {
+        return $this->hasMany(ProductPenambahan::class);
+    }
+
     public function vendorItems(): HasMany
     {
         return $this->hasMany(ProductVendor::class);
@@ -63,6 +89,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function lastEditedBy()
+    {
+        return $this->belongsTo(User::class, 'last_edited_by_id');
     }
 
     public function orderProducts()

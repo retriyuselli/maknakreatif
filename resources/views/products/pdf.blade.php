@@ -6,38 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Details PDF: {{ $product->name }}</title>
     <style>
-        /* Definisi Font Poppins untuk PDF Generator */
-        @font-face {
-            font-family: 'Poppins';
-            src: url('{{ public_path('fonts/Poppins-Regular.ttf') }}') format('truetype');
-            font-weight: normal;
-            /* 400 */
-            font-style: normal;
-        }
-
-        @font-face {
-            font-family: 'Poppins';
-            src: url('{{ public_path('fonts/Poppins-Bold.ttf') }}') format('truetype');
-            font-weight: bold;
-            /* 700 */
-            font-style: normal;
-        }
-
-        @font-face {
-            font-family: 'Poppins';
-            src: url('{{ public_path('fonts/Poppins-Italic.ttf') }}') format('truetype');
-            font-weight: normal;
-            /* 400 */
-            font-style: italic;
-        }
-
-        @font-face {
-            font-family: 'Poppins';
-            src: url('{{ public_path('fonts/Poppins-BoldItalic.ttf') }}') format('truetype');
-            font-weight: bold;
-            /* 700 */
-            font-style: italic;
-        }
+        /* Import Noto Sans font dari Google Fonts untuk PDF */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
         @page {
             /* margin: 2cm; */
@@ -50,7 +20,7 @@
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Noto Sans', sans-serif;
             font-size: 10pt;
             /* Ukuran font standar untuk PDF */
             background-color: #ffffff;
@@ -307,7 +277,7 @@
                     <strong>Document Details</strong><br>
                     Reference : PROD-{{ str_pad($product->id, 6, '0', STR_PAD_LEFT) }}<br>
                     Date : {{ now()->format('d F Y H:i:s') }}<br>
-                    Printed By : <strong>{{ auth()->user()->name }}</strong>
+                    Printed By : <strong>{{ auth()->user()->name ?? 'System' }}</strong>
                 </td>
             </tr>
         </table>
@@ -357,6 +327,46 @@
             </table>
         </div>
 
+        {{-- Addition Details --}}
+        @if($product->penambahanHarga && $product->penambahanHarga->count() > 0)
+        <div class="package-details-box">
+            <h3 class="section-title">Additional Price Details</h3>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; vertical-align: top;">No.</th>
+                        <th style="vertical-align: top;">Description</th>
+                        <th style="width: 15%; text-align: right; vertical-align: top;">Vendor</th>
+                        <th style="width: 15%; text-align: right; vertical-align: top;">Publish</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($product->penambahanHarga as $addition)
+                        <tr>
+                            <td style="text-align: center; vertical-align: top;">{{ $loop->iteration }}</td>
+                            <td>
+                                <div style="font-weight: bold; margin-bottom: 2px;">
+                                    {{ $addition->vendor->name ?? 'N/A' }}
+                                </div>
+                                @isset($addition->description)
+                                    <ol class="vendor-description">
+                                        {!! strip_tags($addition->description, '<li>') !!}
+                                    </ol>
+                                @endisset
+                            </td>
+                            <td style="text-align: right; vertical-align: top;">
+                                {{ number_format($addition->harga_vendor ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td style="text-align: right; vertical-align: top;">
+                                {{ number_format($addition->harga_publish ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
+        
         {{-- Reduction Details --}}
         <div class="package-details-box"> {{-- Gunakan box yang sudah ada stylenya --}}
             <h3 class="section-title">Reduction Details</h3> {{-- Gunakan kelas judul --}}
@@ -395,6 +405,7 @@
             </table>
         </div>
 
+
         {{-- Price Calculation --}}
         <div class="package-details-box">
             @php
@@ -408,15 +419,16 @@
                 return ($item->harga_vendor ?? 0) * ($item->quantity ?? 1);
             });
 
-            // Harga dasar paket adalah total harga publik
-            $basePackagePrice = $totalPublicPrice;
-
             // Hitung total jumlah diskon
             $totalDiscountAmount = ($product->pengurangans ?? collect())->sum('amount');
 
-            // Hitung harga final setelah diskon
-            $finalPriceAfterDiscounts = $basePackagePrice - $totalDiscountAmount;
-            $finalVendorPriceAfterDiscounts = $totalVendorPrice - $totalDiscountAmount;
+            // Hitung total jumlah penambahan harga
+            $totalAdditionAmount = ($product->penambahanHarga ?? collect())->sum('harga_publish');
+            $totalAdditionVendorAmount = ($product->penambahanHarga ?? collect())->sum('harga_vendor');
+
+            // Hitung harga final setelah diskon dan penambahan
+            $finalPriceAfterDiscounts = $totalPublicPrice - $totalDiscountAmount + $totalAdditionAmount;
+            $finalVendorPriceAfterDiscounts = $totalVendorPrice - $totalDiscountAmount + $totalAdditionVendorAmount;
 
             // Hitung Profit & Loss
             $profitAndLoss = $finalPriceAfterDiscounts - $finalVendorPriceAfterDiscounts;
@@ -427,7 +439,7 @@
                 <tr>
                     <td><strong>Total Publish Price</strong></td>
                     <td style="text-align: right; font-weight: bold;">
-                        {{ number_format($basePackagePrice, 0, ',', '.') }}</td> {{-- Gunakan style inline untuk bold --}}
+                        {{ number_format($totalPublicPrice, 0, ',', '.') }}</td> {{-- Gunakan style inline untuk bold --}}
                 </tr>
                 <tr>
                     <td>Total Vendor Price</td>
@@ -438,22 +450,35 @@
                     <td style="text-align: right; font-weight: bold; color: red;"> -
                         {{ number_format($totalDiscountAmount, 0, ',', '.') }}</td>
                 </tr>
+                @if($totalAdditionAmount > 0 || $totalAdditionVendorAmount > 0)
                 <tr>
-                    <td><strong>Total Paket Publish (Publish - Reduction)</strong></td>
+                    <td><strong>Total Addition Publish</strong></td>
+                    <td style="text-align: right; font-weight: bold; color: green;"> +
+                        {{ number_format($totalAdditionAmount, 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Total Addition Vendor</strong></td>
+                    <td style="text-align: right; font-weight: bold; color: green;"> +
+                        {{ number_format($totalAdditionVendorAmount, 0, ',', '.') }}</td>
+                </tr>
+                @endif
+                <tr>
+                    <td><strong>Total Paket Publish</strong></td>
                     <td style="text-align: right; font-weight: bold;">
                         {{ number_format($finalPriceAfterDiscounts, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td><strong>Total Paket Vendor (Vendor - Reduction)</strong></td>
+                    <td><strong>Total Paket Vendor</strong></td>
                     <td style="text-align: right; font-weight: bold;">
                         {{ number_format($finalVendorPriceAfterDiscounts, 0, ',', '.') }}</td>
                 </tr>
-                <td><strong>Profit & Lost</strong></td>
-                {{-- Tambahkan style kondisional untuk warna merah jika profit < 30jt --}}
-                <td
-                    style="text-align: right; font-weight: bold; color: {{ $profitAndLoss < 30000000 ? 'red' : '#333' }};">
-                    {{ number_format($profitAndLoss, 0, ',', '.') }}
-                </td>
+                <tr>
+                    <td><strong>Profit & Loss</strong></td>
+                    {{-- Tambahkan style kondisional untuk warna merah jika profit < 30jt --}}
+                    <td
+                        style="text-align: right; font-weight: bold; color: {{ $profitAndLoss < 30000000 ? 'red' : '#333' }};">
+                        {{ number_format($profitAndLoss, 0, ',', '.') }}
+                    </td>
                 </tr>
             </table>
         </div>
