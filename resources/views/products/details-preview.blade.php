@@ -479,7 +479,7 @@
                         (Penambahan)</strong></td>
                         <td class="border border-gray-300 p-2 text-right text-green-600 font-semibold"><strong>+
                             {{ number_format($totalAdditionAmount, 0, ',', '.') }}</strong></td>
-                        </tr>
+                        </tr>   
                 <tr>
                     <td class="border border-gray-300 p-2 text-right text-xs"><strong>Total Addition Vendor
                         (Penambahan)</strong></td>

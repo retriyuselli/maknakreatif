@@ -456,305 +456,305 @@ class OrderResource extends Resource
                         Forms\Components\Section::make('Pengeluaran')
                             ->description('Catat pengeluaran ke vendor. Setiap vendor hanya boleh dipilih satu kali per order.')
                             ->schema([
-                            Forms\Components\Repeater::make('expenses')
-                                ->relationship('expenses')
-                                ->live() // Enable live updates for anti-duplicate across items
-                                ->schema([
-                                    Forms\Components\Grid::make(3)
-                                        ->schema([
-                                            Forms\Components\Select::make('nota_dinas_id')
-                                                ->label('Nota Dinas')
-                                                ->options(function (callable $get) {
-                                                    $orderId = $get('../../id');
+                                Forms\Components\Repeater::make('expenses')
+                                    ->relationship('expenses')
+                                    ->live() // Enable live updates for anti-duplicate across items
+                                    ->schema([
+                                        Forms\Components\Grid::make(3)
+                                            ->schema([
+                                                Forms\Components\Select::make('nota_dinas_id')
+                                                    ->label('Nota Dinas')
+                                                    ->options(function (callable $get) {
+                                                        $orderId = $get('../../id');
 
-                                                    if (!$orderId) return [];
+                                                        if (!$orderId) return [];
 
-                                                    return \App\Models\NotaDinas::whereHas('details', function ($query) use ($orderId) {
-                                                        $query->where('order_id', $orderId);
-                                                    })->pluck('no_nd', 'id')->toArray();
-                                                })
-                                                ->reactive()
-                                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                                    // Only reset if nota_dinas_id is cleared or changed
-                                                    if (!$state) {
-                                                        $set('vendor_id', null);
-                                                        $set('note', null);
-                                                        $set('amount', null);
-                                                        $set('account_holder', null);
-                                                        $set('bank_name', null);
-                                                        $set('bank_account', null);
-                                                        $set('no_nd', null);
-                                                    } else {
-                                                        // Get the selected Nota Dinas and set no_nd field
-                                                        $notaDinas = \App\Models\NotaDinas::find($state);
-                                                        if ($notaDinas) {
-                                                            $set('no_nd', $notaDinas->no_nd);
-                                                        }
-                                                    }
-                                                }),
-
-                                            Forms\Components\Hidden::make('no_nd')
-                                                // ->readOnly()
-                                                ->dehydrated()
-                                                ->label('No. Nota Dinas'),
-                                                // ->placeholder('Pilih Nota Dinas terlebih dahulu'),
-
-                                            Forms\Components\Select::make('nota_dinas_detail_id')
-                                                ->label('Detail Nota Dinas')
-                                                ->options(function (callable $get) {
-                                                    $notaDinasId = $get('nota_dinas_id');
-                                                    if (!$notaDinasId) return [];
-
-                                                    try {
-                                                        // More robust path detection
-                                                        $currentExpenseItems = $get('../../expenses') ?? $get('../expenses') ?? $get('expenses') ?? [];
-                                                        $currentDetailId = $get('nota_dinas_detail_id');
-                                                        $currentExpenseId = $get('id');
-                                                        $orderId = $get('../../id') ?? $get('../id') ?? $get('id');
-                                                        
-                                                        // Get all used detail IDs more efficiently
-                                                        $usedDetailIds = [];
-                                                        
-                                                        // From form state
-                                                        foreach ($currentExpenseItems as $item) {
-                                                            if (isset($item['nota_dinas_detail_id']) && 
-                                                                $item['nota_dinas_detail_id'] !== $currentDetailId &&
-                                                                (!isset($item['id']) || $item['id'] !== $currentExpenseId)) {
-                                                                $usedDetailIds[] = $item['nota_dinas_detail_id'];
-                                                            }
-                                                        }
-                                                        
-                                                        // From database
-                                                        if ($orderId) {
-                                                            $dbUsedIds = \App\Models\Expense::where('order_id', $orderId)
-                                                                ->whereNotNull('nota_dinas_detail_id')
-                                                                ->when($currentExpenseId, function($query) use ($currentExpenseId) {
-                                                                    return $query->where('id', '!=', $currentExpenseId);
-                                                                })
-                                                                ->pluck('nota_dinas_detail_id')
-                                                                ->toArray();
-                                                            
-                                                            $usedDetailIds = array_unique(array_merge($usedDetailIds, $dbUsedIds));
-                                                        }
-
-                                        // Single optimized query with all conditions
-                                        $availableDetails = \App\Models\NotaDinasDetail::with('vendor')
-                                            ->where('nota_dinas_id', $notaDinasId)
-                                            ->where('jenis_pengeluaran', 'wedding')
-                                            ->whereNotIn('id', $usedDetailIds)
-                                            ->whereHas('vendor') // More efficient than filter
-                                            ->get();
-
-                                        // Preserve current selection
-                                        if ($currentDetailId && !$availableDetails->contains('id', $currentDetailId)) {
-                                            $currentDetail = \App\Models\NotaDinasDetail::with('vendor')
-                                                ->where('jenis_pengeluaran', 'wedding')
-                                                ->find($currentDetailId);
-                                            if ($currentDetail && $currentDetail->vendor) {
-                                                $availableDetails->prepend($currentDetail);
-                                            }
-                                        }
-
-                                                        return $availableDetails->mapWithKeys(function ($detail) use ($usedDetailIds) {
-                                                            $vendorName = $detail->vendor->name ?? 'N/A';
-                                                            $keperluan = $detail->keperluan ?? 'N/A';
-                                                            $paymentStage = $detail->payment_stage ? " | {$detail->payment_stage}" : '';
-                                                            $jumlah = number_format($detail->jumlah_transfer, 0, ',', '.');
-                                                            
-                                                            $usedIndicator = in_array($detail->id, $usedDetailIds) ? ' (Tersedia kembali)' : '';
-                                                            
-                                                            $label = "{$vendorName} | {$keperluan}{$paymentStage} | Rp {$jumlah}{$usedIndicator}";
-                                                            return [$detail->id => $label];
-                                                        })->toArray();
-                                                        
-                                                    } catch (\Exception $e) {
-                                                        \Illuminate\Support\Facades\Log::error('Error in nota_dinas_detail_id options: ' . $e->getMessage(), [
-                                                            'nota_dinas_id' => $notaDinasId,
-                                                            'trace' => $e->getTraceAsString()
-                                                        ]);
-                                                        return [];
-                                                    }
-                                                })
-                                                ->searchable()
-                                                ->reactive()
-                                                ->live()
-                                                ->helperText(function (callable $get) {
-                                                    try {
-                                                        $notaDinasId = $get('nota_dinas_id');
-                                                        if (!$notaDinasId) return 'Pilih Nota Dinas terlebih dahulu';
-                                                        
-                                                        // More robust path detection
-                                                        $currentExpenseItems = $get('../../expenses') ?? $get('../expenses') ?? $get('expenses') ?? [];
-                                                        $orderId = $get('../../id') ?? $get('../id') ?? $get('id');
-                                                        
-                                                        // Get actual used count (unique IDs)
-                                                        $formUsedIds = array_filter(array_column($currentExpenseItems, 'nota_dinas_detail_id'));
-                                                        $dbUsedIds = $orderId ? \App\Models\Expense::where('order_id', $orderId)
-                                                            ->whereNotNull('nota_dinas_detail_id')
-                                                            ->pluck('nota_dinas_detail_id')
-                                                            ->toArray() : [];
-                                                        
-                                                        $allUsedIds = array_unique(array_merge($formUsedIds, $dbUsedIds));
-                                                        $actualUsedCount = count($allUsedIds);
-                                                        
-                                                        $totalCount = \App\Models\NotaDinasDetail::where('nota_dinas_id', $notaDinasId)
-                                                            ->where('jenis_pengeluaran', 'wedding')
-                                                            ->count();
-                                                        
-                                                        return "Pilih detail nota dinas yang akan dibayar (Sudah dipilih: {$actualUsedCount}/{$totalCount})";
-                                                        
-                                                    } catch (\Exception $e) {
-                                                        \Illuminate\Support\Facades\Log::warning('Error in helperText: ' . $e->getMessage());
-                                                        return 'Pilih detail nota dinas yang akan dibayar';
-                                                    }
-                                                })
-                                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                                    try {
+                                                        return \App\Models\NotaDinas::whereHas('details', function ($query) use ($orderId) {
+                                                            $query->where('order_id', $orderId);
+                                                        })->pluck('no_nd', 'id')->toArray();
+                                                    })
+                                                    ->reactive()
+                                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                                        // Only reset if nota_dinas_id is cleared or changed
                                                         if (!$state) {
                                                             $set('vendor_id', null);
+                                                            $set('note', null);
+                                                            $set('amount', null);
                                                             $set('account_holder', null);
                                                             $set('bank_name', null);
                                                             $set('bank_account', null);
-                                                            $set('amount', null);
-                                                            $set('note', null);
-                                                            return;
+                                                            $set('no_nd', null);
+                                                        } else {
+                                                            // Get the selected Nota Dinas and set no_nd field
+                                                            $notaDinas = \App\Models\NotaDinas::find($state);
+                                                            if ($notaDinas) {
+                                                                $set('no_nd', $notaDinas->no_nd);
+                                                            }
                                                         }
+                                                    }),
 
-                                                        // Fetch NotaDinasDetail and populate related fields
-                                                        $notaDinasDetail = \App\Models\NotaDinasDetail::with('vendor')->find($state);
-                                                        if ($notaDinasDetail) {
-                                                            $set('vendor_id', $notaDinasDetail->vendor_id);
-                                                            $set('account_holder', $notaDinasDetail->account_holder ?? $notaDinasDetail->vendor->account_holder);
-                                                            $set('bank_name', $notaDinasDetail->bank_name ?? $notaDinasDetail->vendor->bank_name);
-                                                            $set('bank_account', $notaDinasDetail->bank_account ?? $notaDinasDetail->vendor->bank_account);
-                                                            $set('amount', self::safeFloatVal($notaDinasDetail->jumlah_transfer ?? 0));
-                                                            $set('note', $notaDinasDetail->keperluan ?? null);
+                                                Forms\Components\Hidden::make('no_nd')
+                                                    // ->readOnly()
+                                                    ->dehydrated()
+                                                    ->label('No. Nota Dinas'),
+                                                    // ->placeholder('Pilih Nota Dinas terlebih dahulu'),
+
+                                                Forms\Components\Select::make('nota_dinas_detail_id')
+                                                    ->label('Detail Nota Dinas')
+                                                    ->options(function (callable $get) {
+                                                        $notaDinasId = $get('nota_dinas_id');
+                                                        if (!$notaDinasId) return [];
+
+                                                        try {
+                                                            // More robust path detection
+                                                            $currentExpenseItems = $get('../../expenses') ?? $get('../expenses') ?? $get('expenses') ?? [];
+                                                            $currentDetailId = $get('nota_dinas_detail_id');
+                                                            $currentExpenseId = $get('id');
+                                                            $orderId = $get('../../id') ?? $get('../id') ?? $get('id');
+                                                            
+                                                            // Get all used detail IDs more efficiently
+                                                            $usedDetailIds = [];
+                                                            
+                                                            // From form state
+                                                            foreach ($currentExpenseItems as $item) {
+                                                                if (isset($item['nota_dinas_detail_id']) && 
+                                                                    $item['nota_dinas_detail_id'] !== $currentDetailId &&
+                                                                    (!isset($item['id']) || $item['id'] !== $currentExpenseId)) {
+                                                                    $usedDetailIds[] = $item['nota_dinas_detail_id'];
+                                                                }
+                                                            }
+                                                            
+                                                            // From database
+                                                            if ($orderId) {
+                                                                $dbUsedIds = \App\Models\Expense::where('order_id', $orderId)
+                                                                    ->whereNotNull('nota_dinas_detail_id')
+                                                                    ->when($currentExpenseId, function($query) use ($currentExpenseId) {
+                                                                        return $query->where('id', '!=', $currentExpenseId);
+                                                                    })
+                                                                    ->pluck('nota_dinas_detail_id')
+                                                                    ->toArray();
+                                                                
+                                                                $usedDetailIds = array_unique(array_merge($usedDetailIds, $dbUsedIds));
+                                                            }
+
+                                            // Single optimized query with all conditions
+                                            $availableDetails = \App\Models\NotaDinasDetail::with('vendor')
+                                                ->where('nota_dinas_id', $notaDinasId)
+                                                ->where('jenis_pengeluaran', 'wedding')
+                                                ->whereNotIn('id', $usedDetailIds)
+                                                ->whereHas('vendor') // More efficient than filter
+                                                ->get();
+
+                                            // Preserve current selection
+                                            if ($currentDetailId && !$availableDetails->contains('id', $currentDetailId)) {
+                                                $currentDetail = \App\Models\NotaDinasDetail::with('vendor')
+                                                    ->where('jenis_pengeluaran', 'wedding')
+                                                    ->find($currentDetailId);
+                                                if ($currentDetail && $currentDetail->vendor) {
+                                                    $availableDetails->prepend($currentDetail);
+                                                }
+                                            }
+
+                                                            return $availableDetails->mapWithKeys(function ($detail) use ($usedDetailIds) {
+                                                                $vendorName = $detail->vendor->name ?? 'N/A';
+                                                                $keperluan = $detail->keperluan ?? 'N/A';
+                                                                $paymentStage = $detail->payment_stage ? " | {$detail->payment_stage}" : '';
+                                                                $jumlah = number_format($detail->jumlah_transfer, 0, ',', '.');
+                                                                
+                                                                $usedIndicator = in_array($detail->id, $usedDetailIds) ? ' (Tersedia kembali)' : '';
+                                                                
+                                                                $label = "{$vendorName} | {$keperluan}{$paymentStage} | Rp {$jumlah}{$usedIndicator}";
+                                                                return [$detail->id => $label];
+                                                            })->toArray();
+                                                            
+                                                        } catch (\Exception $e) {
+                                                            \Illuminate\Support\Facades\Log::error('Error in nota_dinas_detail_id options: ' . $e->getMessage(), [
+                                                                'nota_dinas_id' => $notaDinasId,
+                                                                'trace' => $e->getTraceAsString()
+                                                            ]);
+                                                            return [];
                                                         }
-                                                    } catch (\Exception $e) {
-                                                        \Illuminate\Support\Facades\Log::error('Error in afterStateUpdated: ' . $e->getMessage());
-                                                    }
-                                                })
-                                                ->required()
-                                                ->columnSpan(2),
+                                                    })
+                                                    ->searchable()
+                                                    ->reactive()
+                                                    ->live()
+                                                    ->helperText(function (callable $get) {
+                                                        try {
+                                                            $notaDinasId = $get('nota_dinas_id');
+                                                            if (!$notaDinasId) return 'Pilih Nota Dinas terlebih dahulu';
+                                                            
+                                                            // More robust path detection
+                                                            $currentExpenseItems = $get('../../expenses') ?? $get('../expenses') ?? $get('expenses') ?? [];
+                                                            $orderId = $get('../../id') ?? $get('../id') ?? $get('id');
+                                                            
+                                                            // Get actual used count (unique IDs)
+                                                            $formUsedIds = array_filter(array_column($currentExpenseItems, 'nota_dinas_detail_id'));
+                                                            $dbUsedIds = $orderId ? \App\Models\Expense::where('order_id', $orderId)
+                                                                ->whereNotNull('nota_dinas_detail_id')
+                                                                ->pluck('nota_dinas_detail_id')
+                                                                ->toArray() : [];
+                                                            
+                                                            $allUsedIds = array_unique(array_merge($formUsedIds, $dbUsedIds));
+                                                            $actualUsedCount = count($allUsedIds);
+                                                            
+                                                            $totalCount = \App\Models\NotaDinasDetail::where('nota_dinas_id', $notaDinasId)
+                                                                ->where('jenis_pengeluaran', 'wedding')
+                                                                ->count();
+                                                            
+                                                            return "Pilih detail nota dinas yang akan dibayar (Sudah dipilih: {$actualUsedCount}/{$totalCount})";
+                                                            
+                                                        } catch (\Exception $e) {
+                                                            \Illuminate\Support\Facades\Log::warning('Error in helperText: ' . $e->getMessage());
+                                                            return 'Pilih detail nota dinas yang akan dibayar';
+                                                        }
+                                                    })
+                                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                                        try {
+                                                            if (!$state) {
+                                                                $set('vendor_id', null);
+                                                                $set('account_holder', null);
+                                                                $set('bank_name', null);
+                                                                $set('bank_account', null);
+                                                                $set('amount', null);
+                                                                $set('note', null);
+                                                                return;
+                                                            }
 
-                                            Forms\Components\Hidden::make('vendor_id'),
-                                            
-                                            ]),
+                                                            // Fetch NotaDinasDetail and populate related fields
+                                                            $notaDinasDetail = \App\Models\NotaDinasDetail::with('vendor')->find($state);
+                                                            if ($notaDinasDetail) {
+                                                                $set('vendor_id', $notaDinasDetail->vendor_id);
+                                                                $set('account_holder', $notaDinasDetail->account_holder ?? $notaDinasDetail->vendor->account_holder);
+                                                                $set('bank_name', $notaDinasDetail->bank_name ?? $notaDinasDetail->vendor->bank_name);
+                                                                $set('bank_account', $notaDinasDetail->bank_account ?? $notaDinasDetail->vendor->bank_account);
+                                                                $set('amount', self::safeFloatVal($notaDinasDetail->jumlah_transfer ?? 0));
+                                                                $set('note', $notaDinasDetail->keperluan ?? null);
+                                                            }
+                                                        } catch (\Exception $e) {
+                                                            \Illuminate\Support\Facades\Log::error('Error in afterStateUpdated: ' . $e->getMessage());
+                                                        }
+                                                    })
+                                                    ->required()
+                                                    ->columnSpan(2),
+
+                                                Forms\Components\Hidden::make('vendor_id'),
+                                                
+                                                ]),
+                                                
+                                                Forms\Components\Grid::make(3)
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('bank_name')
+                                                        ->label('Bank')
+                                                        ->required()
+                                                        ->live()
+                                                        ->columnSpan(1),
+
+                                                    Forms\Components\TextInput::make('account_holder')
+                                                        ->label('Nama Rekening')
+                                                        ->required()
+                                                        ->live()
+                                                        ->columnSpan(1),
+                                                    
+                                                    Forms\Components\TextInput::make('bank_account')
+                                                        ->label('Nomor Rekening')
+                                                        ->required()
+                                                        ->live()
+                                                        ->columnSpan(1),
+                                                ]),
+
                                             
                                             Forms\Components\Grid::make(3)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('bank_name')
-                                                    ->label('Bank')
-                                                    ->required()
-                                                    ->live()
-                                                    ->columnSpan(1),
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('amount')
+                                                        ->label('Jumlah Transfer')
+                                                        ->numeric()
+                                                        ->prefix('Rp. ')
+                                                        ->mask(RawJs::make('$money($input)'))
+                                                        ->stripCharacters(',')
+                                                        ->dehydrateStateUsing(fn ($state) => floatval(str_replace([',', '.'], ['', '.'], $state ?? 0)))
+                                                        ->required(),
 
-                                                Forms\Components\TextInput::make('account_holder')
-                                                    ->label('Nama Rekening')
-                                                    ->required()
-                                                    ->live()
-                                                    ->columnSpan(1),
-                                                
-                                                Forms\Components\TextInput::make('bank_account')
-                                                    ->label('Nomor Rekening')
-                                                    ->required()
-                                                    ->live()
-                                                    ->columnSpan(1),
-                                            ]),
+                                                    Forms\Components\Select::make('payment_method_id')
+                                                        ->label('Metode Pembayaran')
+                                                        ->required()
+                                                        ->options(\App\Models\PaymentMethod::all()
+                                                        ->pluck('name', 'id')),
 
-                                        
-                                        Forms\Components\Grid::make(3)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('amount')
-                                                    ->label('Jumlah Transfer')
-                                                    ->numeric()
-                                                    ->prefix('Rp. ')
-                                                    ->mask(RawJs::make('$money($input)'))
-                                                    ->stripCharacters(',')
-                                                    ->dehydrateStateUsing(fn ($state) => floatval(str_replace([',', '.'], ['', '.'], $state ?? 0)))
-                                                    ->required(),
+                                                    Forms\Components\DatePicker::make('date_expense')
+                                                        ->label('Tanggal Pengeluaran')
+                                                        ->default(now())
+                                                        ->required(),
+                                                ]),
 
-                                                Forms\Components\Select::make('payment_method_id')
-                                                    ->label('Metode Pembayaran')
-                                                    ->required()
-                                                    ->options(\App\Models\PaymentMethod::all()
-                                                    ->pluck('name', 'id')),
-
-                                                Forms\Components\DatePicker::make('date_expense')
-                                                    ->label('Tanggal Pengeluaran')
-                                                    ->default(now())
-                                                    ->required(),
-                                            ]),
-
-                                        Forms\Components\Grid::make(1)
-                                            ->schema([
-                                                Forms\Components\Textarea::make('note')
-                                                    ->label('Catatan / Keperluan')
-                                                    ->required()
-                                                    ->rows(3)
-                                                    ->columnSpan(1),
-                                                Forms\Components\FileUpload::make('image')
-                                                    ->label('Bukti Transfer')
-                                                    ->directory('expense-proofs')
-                                                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
-                                                    ->maxSize(5120) // 5MB
-                                                    ->required()
-                                                    ->columnSpan(1),
-                                            ]),
-                                ])
-                                ->defaultItems(0)
-                                ->collapsible()
-                                ->collapsed(false)
-                                ->itemLabel(function (array $state): ?string {
-                                    if (!isset($state['vendor_id']) || !$state['vendor_id']) {
-                                        return '🆕 Expense Baru';
-                                    }
-                                    
-                                    try {
-                                        $vendor = \App\Models\Vendor::find($state['vendor_id']);
-                                        $vendorName = $vendor?->name ?? 'Vendor #' . $state['vendor_id'];
-                                        
-                                        // Safe currency formatting helper
-                                        $formatCurrency = function($value) {
-                                            if (empty($value)) return 'Rp 0';
-                                            
-                                            // Handle different data types
-                                            if (is_string($value)) {
-                                                // Remove existing formatting
-                                                $value = preg_replace('/[^\d.,]/', '', $value);
-                                                $value = str_replace(',', '', $value);
-                                            }
-                                            
-                                            $numericValue = self::safeFloatVal($value);
-                                            return 'Rp ' . number_format($numericValue, 0, ',', '.');
-                                        };
-                                        
-                                        $formattedAmount = $formatCurrency($state['amount'] ?? 0);
-                                        
-                                        // Get payment stage label from NotaDinasDetail
-                                        $paymentStage = 'DP'; // default
-                                        if (isset($state['nota_dinas_detail_id'])) {
-                                            try {
-                                                $notaDinasDetail = \App\Models\NotaDinasDetail::find($state['nota_dinas_detail_id']);
-                                                $paymentStage = $notaDinasDetail?->payment_stage ?? 'DP';
-                                            } catch (\Exception $e) {
-                                                // Keep default
-                                            }
+                                            Forms\Components\Grid::make(1)
+                                                ->schema([
+                                                    Forms\Components\Textarea::make('note')
+                                                        ->label('Catatan / Keperluan')
+                                                        ->required()
+                                                        ->rows(3)
+                                                        ->columnSpan(1),
+                                                    Forms\Components\FileUpload::make('image')
+                                                        ->label('Bukti Transfer')
+                                                        ->directory('expense-proofs')
+                                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                                                        ->maxSize(5120) // 5MB
+                                                        ->required()
+                                                        ->columnSpan(1),
+                                                ]),
+                                    ])
+                                    ->defaultItems(0)
+                                    ->collapsible()
+                                    ->collapsed(false)
+                                    ->itemLabel(function (array $state): ?string {
+                                        if (!isset($state['vendor_id']) || !$state['vendor_id']) {
+                                            return '🆕 Expense Baru';
                                         }
                                         
-                                        return "🏪 {$vendorName} ({$paymentStage}) - {$formattedAmount}";
-                                    } catch (\Exception $e) {
-                                        \Illuminate\Support\Facades\Log::warning('Error in expense itemLabel: ' . $e->getMessage());
-                                        return '⚠️ Expense Item';
-                                    }
-                                })
-                                ->addActionLabel('Tambah Expense')
-                                ->reorderable()
-                                ->cloneable()
-                                ->afterStateUpdated(function ($state, $livewire) {
-                                    // Force refresh form to update options in all items
-                                    $livewire->dispatch('refreshForm');
-                                }),
+                                        try {
+                                            $vendor = \App\Models\Vendor::find($state['vendor_id']);
+                                            $vendorName = $vendor?->name ?? 'Vendor #' . $state['vendor_id'];
+                                            
+                                            // Safe currency formatting helper
+                                            $formatCurrency = function($value) {
+                                                if (empty($value)) return 'Rp 0';
+                                                
+                                                // Handle different data types
+                                                if (is_string($value)) {
+                                                    // Remove existing formatting
+                                                    $value = preg_replace('/[^\d.,]/', '', $value);
+                                                    $value = str_replace(',', '', $value);
+                                                }
+                                                
+                                                $numericValue = self::safeFloatVal($value);
+                                                return 'Rp ' . number_format($numericValue, 0, ',', '.');
+                                            };
+                                            
+                                            $formattedAmount = $formatCurrency($state['amount'] ?? 0);
+                                            
+                                            // Get payment stage label from NotaDinasDetail
+                                            $paymentStage = 'DP'; // default
+                                            if (isset($state['nota_dinas_detail_id'])) {
+                                                try {
+                                                    $notaDinasDetail = \App\Models\NotaDinasDetail::find($state['nota_dinas_detail_id']);
+                                                    $paymentStage = $notaDinasDetail?->payment_stage ?? 'DP';
+                                                } catch (\Exception $e) {
+                                                    // Keep default
+                                                }
+                                            }
+                                            
+                                            return "🏪 {$vendorName} ({$paymentStage}) - {$formattedAmount}";
+                                        } catch (\Exception $e) {
+                                            \Illuminate\Support\Facades\Log::warning('Error in expense itemLabel: ' . $e->getMessage());
+                                            return '⚠️ Expense Item';
+                                        }
+                                    })
+                                    ->addActionLabel('Tambah Expense')
+                                    ->reorderable()
+                                    ->cloneable()
+                                    ->afterStateUpdated(function ($state, $livewire) {
+                                        // Force refresh form to update options in all items
+                                        $livewire->dispatch('refreshForm');
+                                    }),
                         ]),
                     ]),
 

@@ -37,10 +37,8 @@
  ============================== -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet"> {{-- Inter tetap ada jika masih digunakan di beberapa bagian --}}
 
 
     <!--==============================
@@ -52,25 +50,151 @@
     <link rel="stylesheet" href="{{ asset('assetssimulasi/css/style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        body,
+        * {
+            font-family: 'Noto Sans', sans-serif !important;
+        }
+
+        /* Remove gray background */
         body {
-            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff !important;
+        }
+
+        .invoice-container-wrap {
+            background-color: #ffffff !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            min-height: 100vh !important;
+            padding: 0px 0 !important;
+        }
+
+        .invoice-container {
+            background-color: #ffffff !important;   
+            box-shadow: none !important;
+            border: 0.5px solid #ddd !important;
+            margin: 50 !important;
+            padding: 20px !important;
+            width: 980px !important;
+            max-width: 980px !important;
+            min-height: 100vh !important;
         }
 
         th {
             text-transform: uppercase;
         }
 
+        /* Styling for addition items */
+        .addition-row {
+            background-color: #f8f9fa;
+        }
+
+        .addition-amount {
+            color: #28a745 !important;
+            font-weight: 600 !important;
+        }
+
+        .reduction-amount {
+            color: #dc3545 !important;
+            font-weight: 600 !important;
+        }
+
         /* Print/PDF-specific rules */
         @media print {
-            body {
+
+            body,
+            * {
+                font-family: 'Noto Sans', sans-serif !important;
                 font-size: 10px !important;
+                line-height: 1.3 !important;
+                color: #000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
-            .no-print {
+
+            .no-print,
+            .invoice-buttons {
                 display: none !important;
             }
-            .col-vendor-price,
-            .col-public-price {
+
+            /* Hide vendor and public price columns for main table only, not for addition/reduction tables */
+            .invoice-table:not(.addition-table):not(.reduction-table) .col-vendor-price,
+            .invoice-table:not(.addition-table):not(.reduction-table) .col-public-price,
+            .total-table .col-public-price {
                 display: none !important;
+            }
+            
+            /* Show publish price column for addition table */
+            .addition-table .col-vendor-price {
+                display: none !important;
+            }
+            
+            .addition-table .col-public-price {
+                display: table-cell !important;
+            }
+            
+            /* Show amount column for reduction table */
+            .reduction-table .col-public-price {
+                display: table-cell !important;
+            }
+
+            .invoice-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 15px !important;
+            }
+
+            .invoice-table th,
+            .invoice-table td {
+                border: 1px solid #ddd !important;
+                padding: 8px !important;
+                text-align: left !important;
+            }
+
+            .invoice-table th {
+                background-color: #f8f9fa !important;
+                font-weight: bold !important;
+                text-transform: uppercase !important;
+            }
+
+            .total-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+
+            .total-table th,
+            .total-table td {
+                border: 1px solid #ddd !important;
+                padding: 6px 8px !important;
+            }
+
+            .addition-row {
+                background-color: #f8f9fa !important;
+            }
+
+            .addition-amount {
+                color: #28a745 !important;
+                font-weight: 600 !important;
+            }
+
+            .reduction-amount {
+                color: #dc3545 !important;
+                font-weight: 600 !important;
+            }
+
+            .signature-area {
+                page-break-inside: avoid !important;
+                margin-top: 40px !important;
+            }
+
+            .address-box,
+            .booking-info {
+                margin-bottom: 10px !important;
+            }
+
+            @page {
+                margin: 0.5in !important;
+                size: A4 !important;
             }
         }
     </style>
@@ -217,12 +341,50 @@ Invoice Area
                         @php
                             // Definisikan variabel untuk pengecekan agar lebih bersih
                             $pengurangans = $simulasi->product->pengurangans ?? collect();
+                            $penambahanHarga = $simulasi->product->penambahanHarga ?? collect();
                         @endphp
+
+                        {{-- Section Penambahan --}}
+                        @if ($penambahanHarga->isNotEmpty())
+                            <b>Detail Penambahan :</b>
+                            <table class="invoice-table addition-table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th class="col-vendor-price">Vendor</th>
+                                        <th class="col-public-price">Publish</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($penambahanHarga as $penambahan_item)
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ $penambahan_item->vendor->name ?? 'Penambahan Tanpa Nama' }}</strong>
+                                                </div>
+                                                @if (!empty($penambahan_item->description))
+                                                    <div>
+                                                        {!! $penambahan_item->description !!}
+                                                    </div>
+                                                @endif
+                                            </td>
+                                            <td class="col-vendor-price addition-amount">
+                                                + {{ number_format($penambahan_item->harga_vendor ?? 0, 0, ',', '.') }}
+                                            </td>
+                                            <td class="col-public-price addition-amount">
+                                                +
+                                                {{ number_format($penambahan_item->harga_publish ?? 0, 0, ',', '.') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
 
                         @if ($pengurangans->isNotEmpty())
                             {{-- Bagian ini hanya akan ditampilkan jika ada item pengurangan --}}
                             <b>Detail Pengurangan :</b>
-                            <table class="invoice-table">
+                            <table class="invoice-table reduction-table">
                                 <thead>
                                     <tr>
                                         <th>Description</th>
@@ -233,12 +395,15 @@ Invoice Area
                                     @foreach ($pengurangans as $pengurangan_item)
                                         <tr>
                                             <td>
-                                                <div><strong>{{ $pengurangan_item->description ?? $pengurangan_item->name ?? 'Pengurangan Tanpa Nama' }}</strong></div>
+                                                <div>
+                                                    <strong>{{ $pengurangan_item->description ?? ($pengurangan_item->name ?? 'Pengurangan Tanpa Nama') }}</strong>
+                                                </div>
                                                 @if (!empty($pengurangan_item->notes))
                                                     <div>{!! $pengurangan_item->notes !!}</div>
                                                 @endif
                                             </td>
-                                            <td class="col-public-price">{{ number_format($pengurangan_item->amount, 0, ',', '.') }}</td>
+                                            <td class="col-public-price">
+                                                {{ number_format($pengurangan_item->amount, 0, ',', '.') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -269,6 +434,14 @@ Invoice Area
                                 return ($item->totalVendorPrice ?? 0) * ($item->quantity ?? 1);
                             });
 
+                            // Hitung total penambahan harga
+                            $totalAdditionPublish = ($simulasi->product->penambahanHarga ?? collect())->sum(
+                                'harga_publish',
+                            );
+                            $totalAdditionVendor = ($simulasi->product->penambahanHarga ?? collect())->sum(
+                                'harga_vendor',
+                            );
+
                             // Harga dasar paket adalah total harga publik dari item dan harga vendor dari item
                             $basePackagePrice = $totalPublicPrice;
                             $baseVendorPrice = $totalVendorPrice;
@@ -278,32 +451,50 @@ Invoice Area
                                 'amount',
                             );
 
-                            // Hitung total jumlah harga publish setelah pengurangan
-                            $finalPublicPriceAfterDiscounts = $basePackagePrice - $calculationTotalReductions;
-                            $finalVendorPriceAfterDiscounts = $baseVendorPrice - $calculationTotalReductions;
+                            // Hitung total jumlah harga publish setelah pengurangan dan penambahan
+                            $finalPublicPriceAfterDiscounts =
+                                $basePackagePrice + $totalAdditionPublish - $calculationTotalReductions;
+                            $finalVendorPriceAfterDiscounts =
+                                $baseVendorPrice + $totalAdditionVendor - $calculationTotalReductions;
 
                             // Grand total for the simulation, directly from the simulation record.
-                            $finalPriceAfterDiscounts = $basePackagePrice - $calculationTotalReductions;
+                            $finalPriceAfterDiscounts =
+                                $basePackagePrice + $totalAdditionPublish - $calculationTotalReductions;
 
                             // Profit & Loss for this simulation
                             $calculationProfitLoss = $finalPublicPriceAfterDiscounts - $finalVendorPriceAfterDiscounts;
-                        @endphp
-
-                        {{-- Total Calculation Section was here, moved it down for clarity --}}
+                        @endphp {{-- Total Calculation Section was here, moved it down for clarity --}}
                         <div class="col-auto">
                             <table class="total-table">
                                 <tr>
                                     <th>Total Publish Price :</th>
                                     <td>{{ number_format($basePackagePrice, 0, ',', '.') }}</td>
                                 </tr>
-                                <tr class="col-public-price"> 
+                                <tr class="col-public-price">
                                     <th>Total Vendor Price :</th>
                                     <td>{{ number_format($baseVendorPrice, 0, ',', '.') }}</td>
                                 </tr>
-                                <tr>
-                                    <th>Pengurangan :</th>
-                                    <td>({{ number_format($calculationTotalReductions, 0, ',', '.') }})</td>
-                                </tr>
+                                @if ($totalAdditionPublish > 0)
+                                    <tr>
+                                        <th style="color: #28a745; font-weight: 600;">Total Penambahan :</th>
+                                        <td style="color: #28a745; font-weight: 600;">+
+                                            {{ number_format($totalAdditionPublish, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endif
+                                @if ($totalAdditionVendor > 0)
+                                    <tr class="col-public-price">
+                                        <th style="color: #28a745; font-weight: 600;">Total Penambahan Vendor :</th>
+                                        <td style="color: #28a745; font-weight: 600;">+
+                                            {{ number_format($totalAdditionVendor, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endif
+                                @if ($calculationTotalReductions > 0)
+                                    <tr>
+                                        <th style="color: #dc3545; font-weight: 600;">Total Pengurangan :</th>
+                                        <td style="color: #dc3545; font-weight: 600;">
+                                            ({{ number_format($calculationTotalReductions, 0, ',', '.') }})</td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <th>Total Paket Publishable :</th>
                                     <td>{{ number_format($finalPublicPriceAfterDiscounts, 0, ',', '.') }}</td>
@@ -312,9 +503,12 @@ Invoice Area
                                     <th>Total Paket Vendorable :</th>
                                     <td>{{ number_format($finalVendorPriceAfterDiscounts, 0, ',', '.') }}</td>
                                 </tr>
-                                <tr class="col-public-price" @if ($calculationProfitLoss < 30000000) style="color: red;" @endif> {{-- Menggunakan kelas hide-on-pdf --}}
-                                    <th @if ($calculationProfitLoss < 30000000) style="font-weight: bold; color: red !important;" @endif>Profit & Loss:</th>
-                                    <td 
+                                <tr class="col-public-price"
+                                    @if ($calculationProfitLoss < 30000000) style="color: red;" @endif> {{-- Menggunakan kelas hide-on-pdf --}}
+                                    <th
+                                        @if ($calculationProfitLoss < 30000000) style="font-weight: bold; color: red !important;" @endif>
+                                        Profit & Loss:</th>
+                                    <td
                                         @if ($calculationProfitLoss > 30000000) style="font-weight: bold; color: blue !important;" @endif>
                                         {{ number_format($calculationProfitLoss, 0, ',', '.') }}</td>
                                 </tr>
@@ -323,11 +517,14 @@ Invoice Area
 
                         {{-- Note Section was here, moved it up before Pengurangan table --}}
                         <div class="invoice-note col-public-price" style="margin-top: 20px; margin-bottom: 20px;">
-                             <p style="width: 100%; overflow: auto; font-size: 12px; text-align: center; "><strong>NOTE :</strong> Pastikan AM Malakukan Pengecekan Data Sebelum Menyerahkan Kepada Calon Klien.</p>
+                            <p style="width: 100%; overflow: auto; font-size: 12px; text-align: center; "><strong>NOTE
+                                    :</strong> Pastikan AM Malakukan Pengecekan Data Sebelum Menyerahkan Kepada Calon
+                                Klien.</p>
                         </div>
 
                         {{-- Signature Section --}}
-                        <div class="signature-area" style="margin-top: 60px; width: 100%; overflow: auto; font-size: 12px;">
+                        <div class="signature-area"
+                            style="margin-top: 60px; width: 100%; overflow: auto; font-size: 12px;">
                             <div style="float: left; width: 40%; text-align: center; margin-left: 5%;">
                                 <p style="margin-bottom: 70px;">Hormat Kami,</p>
                                 <p style="border-top: 1px solid var(--title-color); margin: 0 10px; padding-top: 5px;">
@@ -337,7 +534,8 @@ Invoice Area
                             </div>
                             <div style="float: right; width: 40%; text-align: center; margin-right: 5%;">
                                 <p style="margin-bottom: 70px;">Disetujui Oleh,</p>
-                                <p style="border-top: 1px solid var(--title-color); margin: 0 10px; padding-top: 5px;">(_________________________)</p>
+                                <p style="border-top: 1px solid var(--title-color); margin: 0 10px; padding-top: 5px;">
+                                    (_________________________)</p>
                                 <p>Klien</p>
                             </div>
                             <div style="clear: both;"></div>
@@ -358,14 +556,14 @@ Invoice Area
                                     fill="#00C764" />
                             </svg>
                         </button>
-                        <button id="download_btn" class="download_btn">
+                        {{-- <button id="download_btn" class="download_btn">
                             <svg width="25" height="19" viewBox="0 0 25 19" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M8.94531 11.1797C8.6849 10.8932 8.6849 10.6068 8.94531 10.3203C9.23177 10.0599 9.51823 10.0599 9.80469 10.3203L11.875 12.3516V6.375C11.901 5.98438 12.1094 5.77604 12.5 5.75C12.8906 5.77604 13.099 5.98438 13.125 6.375V12.3516L15.1953 10.3203C15.4818 10.0599 15.7682 10.0599 16.0547 10.3203C16.3151 10.6068 16.3151 10.8932 16.0547 11.1797L12.9297 14.3047C12.6432 14.5651 12.3568 14.5651 12.0703 14.3047L8.94531 11.1797ZM10.625 0.75C11.7969 0.75 12.8646 1.01042 13.8281 1.53125C14.8177 2.05208 15.625 2.76823 16.25 3.67969C16.8229 3.39323 17.4479 3.25 18.125 3.25C19.375 3.27604 20.4036 3.70573 21.2109 4.53906C22.0443 5.34635 22.474 6.375 22.5 7.625C22.5 8.01562 22.4479 8.41927 22.3438 8.83594C23.151 9.2526 23.7891 9.85156 24.2578 10.6328C24.7526 11.4141 25 12.2865 25 13.25C24.974 14.6562 24.4922 15.8411 23.5547 16.8047C22.5911 17.7422 21.4062 18.224 20 18.25H5.625C4.03646 18.1979 2.70833 17.651 1.64062 16.6094C0.598958 15.5417 0.0520833 14.2135 0 12.625C0.0260417 11.375 0.377604 10.2812 1.05469 9.34375C1.73177 8.40625 2.63021 7.72917 3.75 7.3125C3.88021 5.4375 4.58333 3.88802 5.85938 2.66406C7.13542 1.4401 8.72396 0.802083 10.625 0.75ZM10.625 2C9.08854 2.02604 7.78646 2.54688 6.71875 3.5625C5.67708 4.57812 5.10417 5.85417 5 7.39062C4.94792 7.91146 4.67448 8.27604 4.17969 8.48438C3.29427 8.79688 2.59115 9.33073 2.07031 10.0859C1.54948 10.8151 1.27604 11.6615 1.25 12.625C1.27604 13.875 1.70573 14.9036 2.53906 15.7109C3.34635 16.5443 4.375 16.974 5.625 17H20C21.0677 16.974 21.9531 16.6094 22.6562 15.9062C23.3594 15.2031 23.724 14.3177 23.75 13.25C23.75 12.5208 23.5677 11.8698 23.2031 11.2969C22.8385 10.724 22.3568 10.2682 21.7578 9.92969C21.2109 9.59115 21.0026 9.09635 21.1328 8.44531C21.2109 8.21094 21.25 7.9375 21.25 7.625C21.224 6.73958 20.9245 5.9974 20.3516 5.39844C19.7526 4.82552 19.0104 4.52604 18.125 4.5C17.6302 4.5 17.1875 4.60417 16.7969 4.8125C16.1719 5.04688 15.651 4.90365 15.2344 4.38281C14.7135 3.65365 14.0495 3.08073 13.2422 2.66406C12.4609 2.22135 11.5885 2 10.625 2Z"
                                     fill="#2D7CFE" />
                             </svg>
-                        </button>
+                        </button> --}}
                     </div>
                 </div>
             </main>
