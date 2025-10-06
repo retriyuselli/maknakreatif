@@ -237,6 +237,29 @@
             padding: 10px;
         }
 
+        /* Addition and Reduction Sections */
+        .addition-amount {
+            color: #28a745 !important;
+            font-weight: bold !important;
+        }
+
+        .reduction-amount {
+            color: #dc3545 !important;
+            font-weight: bold !important;
+        }
+
+        .section-container {
+            margin-top: 20px;
+        }
+
+        .sub-section-title {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            font-weight: bold;
+        }
+
         /* Footer */
         .footer {
             border-top: 1px solid #ddd;
@@ -443,6 +466,20 @@
         </tr>
     </table>
 
+    @php
+        // Hitung total penambahan harga dari semua produk dalam order
+        $totalAdditionAmount = 0;
+        if ($order->items && $order->items->count() > 0) {
+            foreach ($order->items as $orderItem) {
+                if ($orderItem->product && $orderItem->product->penambahanHarga) {
+                    $productAdditionPublish = $orderItem->product->penambahanHarga->sum('harga_publish');
+                    $quantity = $orderItem->quantity ?? 1;
+                    $totalAdditionAmount += $productAdditionPublish * $quantity;
+                }
+            }
+        }
+    @endphp
+
     <!-- Billing Summary Table -->
     <div class="billing-summary" style="margin-top: 30px;">
         <table class="bordered">
@@ -456,6 +493,13 @@
                     <td>Total Paket Awal</td>
                     <td class="text-right">Rp {{ number_format($order->total_price, 0, ',', '.') }}</td>
                 </tr>
+
+                @if($totalAdditionAmount > 0)
+                <tr>
+                    <td>Total Penambahan dari Produk</td>
+                    <td class="text-right addition-amount">+ Rp {{ number_format($totalAdditionAmount, 0, ',', '.') }}</td>
+                </tr>
+                @endif
 
                 @if ($order->promo > 0)
                     <tr>
@@ -495,6 +539,56 @@
         </table>
     </div>
 
+    <!-- Detail Penambahan per Produk dalam Order -->
+    @php
+        $allProductPenambahanHarga = collect();
+        if ($order->items && $order->items->count() > 0) {
+            foreach ($order->items as $orderItem) {
+                if ($orderItem->product && $orderItem->product->penambahanHarga && $orderItem->product->penambahanHarga->count() > 0) {
+                    foreach ($orderItem->product->penambahanHarga as $penambahan) {
+                        // Menambahkan nama produk ke objek penambahan untuk referensi
+                        $penambahan->product_name = $orderItem->product->name;
+                        $allProductPenambahanHarga->push($penambahan);
+                    }
+                }
+            }
+        }
+    @endphp
+
+    @if ($allProductPenambahanHarga->isNotEmpty())
+        <div class="section-container" style="margin-top: 20px;">
+            <h3 class="sub-section-title"
+                style="font-size: 1.1em; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+                Rincian Item Penambahan Produk</h3>
+            <table class="bordered" style="font-size: 18px;">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; text-align: center;">No</th>
+                        <th style="width: 70%;">Deskripsi Penambahan</th>
+                        <th style="width: 25%; text-align: right;">Nilai</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($allProductPenambahanHarga as $index => $itemPenambahan)
+                        <tr>
+                            <td style="text-align: center;">{{ $index + 1 }}</td>
+                            <td>
+                                {{ $itemPenambahan->vendor->name ?? 'N/A' }}
+                                @if ($itemPenambahan->description)
+                                    <div style="font-size: 15px; margin-left: 30px; color: #555; margin-top: 0px;">
+                                        {!! strip_tags($itemPenambahan->description, '<li><strong><ul><li><br><span><div>') !!}
+                                    </div>
+                                @endif
+                            </td>
+                            <td style="text-align: right; color: #28a745; font-weight: bold;">+ Rp
+                                {{ number_format($itemPenambahan->harga_publish ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     <!-- Detail Pengurangan per Produk dalam Order -->
     @php
         $allProductPengurangans = collect();
@@ -520,8 +614,8 @@
                 <thead>
                     <tr>
                         <th style="width: 5%; text-align: center;">No</th>
-                        <th>Deskripsi Pengurangan</th>
-                        <th style="width: 20%; text-align: right;">Nilai</th>
+                        <th style="width: 70%;">Deskripsi Pengurangan</th>
+                        <th style="width: 25%; text-align: right;">Nilai</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -531,8 +625,8 @@
                             <td>
                                 {{ $itemPengurangan->description ?? 'N/A' }}
                                 @if ($itemPengurangan->notes)
-                                    <div style="font-size: 18px; margin-left: 30px; color: #555; margin-top: 0px;">
-                                        <i>{!! strip_tags($itemPengurangan->notes, '<li><strong><ul><li><br><span><div>') !!}
+                                    <div style="font-size: 15px; margin-left: 30px; color: #555; margin-top: 0px;">
+                                        {!! strip_tags($itemPengurangan->notes, '<li><strong><ul><li><br><span><div>') !!}
                                     </div>
                                 @endif
                             </td>

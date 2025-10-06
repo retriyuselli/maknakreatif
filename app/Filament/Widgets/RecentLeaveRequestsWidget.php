@@ -9,8 +9,14 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class RecentLeaveRequestsWidget extends BaseWidget
 {
@@ -115,7 +121,85 @@ class RecentLeaveRequestsWidget extends BaseWidget
             ->actions([
                 ViewAction::make()
                     ->iconButton()
-                    ->tooltip('View Details'),
+                    ->tooltip('View Details')
+                    ->modalHeading(fn (LeaveRequest $record): string => "Leave Request Details - {$record->user->name}")
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->modalWidth('2xl')
+                    ->fillForm(fn (LeaveRequest $record): array => [
+                        'employee_name' => $record->user->name ?? 'N/A',
+                        'leave_type_name' => $record->leaveType->name ?? 'N/A',
+                        'start_date' => $record->start_date,
+                        'end_date' => $record->end_date,
+                        'total_days' => $record->total_days,
+                        'status' => ucfirst($record->status),
+                        'reason' => $record->reason,
+                        'approval_notes' => $record->approval_notes ?? '',
+                        'approver_name' => $record->approver->name ?? '',
+                        'created_at' => $record->created_at->format('M j, Y g:i A'),
+                        'show_approval_notes' => !empty($record->approval_notes),
+                        'show_approver' => !empty($record->approver->name ?? ''),
+                    ])
+                    ->form([
+                        // Hidden fields for conditional display
+                        Hidden::make('show_approval_notes'),
+                        Hidden::make('show_approver'),
+                        
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('employee_name')
+                                    ->label('Employee Name')
+                                    ->disabled(),
+                                    
+                                TextInput::make('leave_type_name')
+                                    ->label('Leave Type')
+                                    ->disabled(),
+                                    
+                                TextInput::make('start_date')
+                                    ->label('Start Date')
+                                    ->disabled()
+                                    ->formatStateUsing(fn ($state): string => $state ? \Carbon\Carbon::parse($state)->format('M j, Y') : 'N/A'),
+                                    
+                                TextInput::make('end_date')
+                                    ->label('End Date')
+                                    ->disabled()
+                                    ->formatStateUsing(fn ($state): string => $state ? \Carbon\Carbon::parse($state)->format('M j, Y') : 'N/A'),
+                                    
+                                TextInput::make('total_days')
+                                    ->label('Total Days')
+                                    ->disabled()
+                                    ->suffix('days'),
+                                    
+                                TextInput::make('status')
+                                    ->label('Status')
+                                    ->disabled(),
+                            ]),
+                            
+                        Textarea::make('reason')
+                            ->label('Reason for Leave')
+                            ->disabled()
+                            ->rows(3)
+                            ->columnSpanFull(),
+                            
+                        Textarea::make('approval_notes')
+                            ->label('Approval Notes')
+                            ->disabled()
+                            ->rows(2)
+                            ->columnSpanFull()
+                            ->hidden(fn (callable $get): bool => !$get('show_approval_notes')),
+                            
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('approver_name')
+                                    ->label('Processed By')
+                                    ->disabled()
+                                    ->hidden(fn (callable $get): bool => !$get('show_approver')),
+                                    
+                                TextInput::make('created_at')
+                                    ->label('Requested At')
+                                    ->disabled(),
+                            ]),
+                    ]),
                     
                 Action::make('approve')
                     ->icon('heroicon-o-check')

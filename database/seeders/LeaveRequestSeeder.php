@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\LeaveRequest;
 use App\Models\User;
-use App\Models\LeaveType;
 use Carbon\Carbon;
 
 class LeaveRequestSeeder extends Seeder
@@ -15,159 +15,144 @@ class LeaveRequestSeeder extends Seeder
      */
     public function run(): void
     {
-        echo "🏖️ Creating Leave Request Data...\n";
-        
-        // Ambil semua users dan leave types
+        echo "\n🏖️ Creating Leave Request Seeder - 7 Records Only...\n";
+        echo "═══════════════════════════════════════════════════════\n\n";
+
+        // Pastikan ada users
         $users = User::all();
-        $leaveTypes = LeaveType::all();
-        
         if ($users->isEmpty()) {
-            echo "❌ No users found. Please run UserSeeder first.\n";
+            echo "❌ No users found! Please run UserSeeder first.\n";
             return;
         }
-        
-        if ($leaveTypes->isEmpty()) {
-            echo "❌ No leave types found. Please run LeaveTypeSeeder first.\n";
-            return;
-        }
-        
-        // Array status untuk variasi
-        $statuses = ['pending', 'approved', 'rejected'];
-        
-        // Array reasons untuk variasi cuti
-        $leaveReasons = [
-            'annual' => [
-                'Liburan keluarga',
-                'Berlibur ke Bali',
-                'Cuti tahunan',
-                'Istirahat',
-                'Liburan akhir tahun',
-                'Refreshing',
-                'Quality time dengan keluarga'
-            ],
-            'sick' => [
-                'Sakit demam',
-                'Flu dan batuk',
-                'Sakit kepala',
-                'Checkup kesehatan',
-                'Rawat jalan rumah sakit',
-                'Istirahat medis',
-                'Sakit perut'
-            ],
-            'emergency' => [
-                'Keluarga sakit',
-                'Keperluan mendesak',
-                'Kecelakaan keluarga',
-                'Urusan penting',
-                'Emergency keluarga',
-                'Musibah',
-                'Kondisi darurat'
-            ],
-            'maternity' => [
-                'Cuti melahirkan',
-                'Persiapan persalinan',
-                'Pemulihan pasca melahirkan',
-                'Perawatan bayi baru lahir'
-            ]
+
+        echo "👥 Found {$users->count()} users in the system\n\n";
+
+        // Hapus data lama jika ada
+        LeaveRequest::truncate();
+        echo "🗑️ Old leave request data cleared\n\n";
+
+        // Ambil LeaveType yang sudah ada
+        $leaveTypes = [
+            'Cuti Tahunan' => 13,    // ID sebenarnya dari database
+            'Cuti Sakit' => 14,      // ID sebenarnya dari database
+            'Cuti Ibadah' => 15,     // Ganti Cuti Pribadi dengan yang ada
+            'Cuti Keluarga' => 18,   // Ganti Cuti Darurat dengan yang ada
         ];
-        
-        $createdCount = 0;
-        
-        // Buat data leave request untuk setiap user
-        foreach ($users as $user) {
-            // Random 2-5 leave requests per user
-            $requestCount = rand(2, 5);
+
+        // Data Leave Request - 7 records only
+        $leaveRequests = [
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Tahunan'],
+                'start_date' => Carbon::now()->addDays(10),
+                'end_date' => Carbon::now()->addDays(14),
+                'total_days' => 5,
+                'reason' => 'Liburan keluarga ke Bali dan refreshing',
+                'status' => 'approved',
+                'approved_by' => $users->random()->id,
+                'approval_notes' => 'Disetujui dengan syarat: Pastikan semua project diserahkan dengan baik.',
+            ],
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Sakit'],
+                'start_date' => Carbon::now()->subDays(3),
+                'end_date' => Carbon::now()->subDays(1),
+                'total_days' => 3,
+                'reason' => 'Sakit demam dan flu, perlu istirahat di rumah',
+                'status' => 'approved',
+                'approved_by' => $users->random()->id,
+                'approval_notes' => 'Cepat sembuh. Harap sertakan surat dokter jika lebih dari 3 hari.',
+            ],
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Ibadah'],
+                'start_date' => Carbon::now()->addDays(20),
+                'end_date' => Carbon::now()->addDays(21),
+                'total_days' => 2,
+                'reason' => 'Ibadah haji bersama keluarga',
+                'status' => 'pending',
+                'approved_by' => null,
+                'approval_notes' => null,
+            ],
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Keluarga'],
+                'start_date' => Carbon::now()->subDays(7),
+                'end_date' => Carbon::now()->subDays(5),
+                'total_days' => 3,
+                'reason' => 'Keadaan darurat keluarga - ayah masuk rumah sakit',
+                'status' => 'approved',
+                'approved_by' => $users->random()->id,
+                'approval_notes' => 'Emergency disetujui langsung. Semoga semuanya baik-baik saja.',
+            ],
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Tahunan'],
+                'start_date' => Carbon::now()->addDays(30),
+                'end_date' => Carbon::now()->addDays(36),
+                'total_days' => 7,
+                'reason' => 'Liburan akhir tahun bersama keluarga besar',
+                'status' => 'rejected',
+                'approved_by' => $users->random()->id,
+                'approval_notes' => 'Maaf, periode tersebut adalah peak season. Mohon pilih tanggal alternatif.',
+            ],
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Sakit'],
+                'start_date' => Carbon::now()->addDays(5),
+                'end_date' => Carbon::now()->addDays(6),
+                'total_days' => 2,
+                'reason' => 'Checkup kesehatan rutin dan pengobatan',
+                'status' => 'pending',
+                'approved_by' => null,
+                'approval_notes' => null,
+            ],
+            [
+                'user_id' => $users->random()->id,
+                'leave_type_id' => $leaveTypes['Cuti Ibadah'],
+                'start_date' => Carbon::now()->addDays(15),
+                'end_date' => Carbon::now()->addDays(17),
+                'total_days' => 3,
+                'reason' => 'Menjalankan ibadah dan quality time dengan keluarga',
+                'status' => 'approved',
+                'approved_by' => $users->random()->id,
+                'approval_notes' => 'Disetujui. Harap koordinasi dengan tim sebelum cuti.',
+            ],
+        ];
+
+        foreach ($leaveRequests as $index => $leaveRequestData) {
+            $leaveRequest = LeaveRequest::create($leaveRequestData);
             
-            for ($i = 0; $i < $requestCount; $i++) {
-                $leaveType = $leaveTypes->random();
-                $status = $statuses[array_rand($statuses)];
-                
-                // Tentukan rentang tanggal (6 bulan terakhir sampai 3 bulan ke depan)
-                $startDate = Carbon::now()
-                    ->subMonths(6)
-                    ->addDays(rand(0, 270)); // Random dalam 9 bulan
-                
-                // Durasi cuti berdasarkan jenis
-                $maxDuration = match($leaveType->name) {
-                    'Cuti Tahunan' => rand(2, 7), // 2-7 hari
-                    'Cuti Sakit' => rand(1, 3),   // 1-3 hari
-                    'Cuti Darurat' => rand(1, 2), // 1-2 hari
-                    'Cuti Melahirkan' => rand(30, 90), // 1-3 bulan
-                    default => rand(1, 5)
-                };
-                
-                $endDate = $startDate->copy()->addDays($maxDuration - 1);
-                $totalDays = $startDate->diffInDays($endDate) + 1;
-                
-                // Tentukan approver (random user yang bukan dirinya sendiri)
-                $approver = null;
-                if ($status !== 'pending') {
-                    $possibleApprovers = $users->where('id', '!=', $user->id);
-                    if ($possibleApprovers->isNotEmpty()) {
-                        $approver = $possibleApprovers->random();
-                    }
-                }
-                
-                // Buat leave request
-                $leaveRequest = LeaveRequest::create([
-                    'user_id' => $user->id,
-                    'leave_type_id' => $leaveType->id,
-                    'start_date' => $startDate->format('Y-m-d'),
-                    'end_date' => $endDate->format('Y-m-d'),
-                    'total_days' => $totalDays,
-                    'status' => $status,
-                    'approved_by' => $approver?->id,
-                ]);
-                
-                $createdCount++;
-                
-                // Tampilkan info
-                $statusIcon = match($status) {
-                    'approved' => '✅',
-                    'rejected' => '❌',
-                    'pending' => '⏳',
-                    default => '📝'
-                };
-                
-                echo "  {$statusIcon} {$user->name} - {$leaveType->name} ({$totalDays} hari) - {$status}\n";
-                echo "     📅 {$startDate->format('d/m/Y')} - {$endDate->format('d/m/Y')}\n";
-                
-                if ($approver) {
-                    echo "     👤 Approved by: {$approver->name}\n";
-                }
-                echo "\n";
-            }
+            $statusIcon = match($leaveRequestData['status']) {
+                'approved' => '✅',
+                'rejected' => '❌',
+                'pending' => '⏳',
+                default => '📝'
+            };
+            
+            $leaveTypeName = array_search($leaveRequestData['leave_type_id'], $leaveTypes);
+            
+            echo "  " . ($index + 1) . ". {$statusIcon} {$leaveTypeName} - {$leaveRequestData['status']}\n";
+            echo "     👤 User ID: {$leaveRequestData['user_id']}\n";
+            echo "     📅 {$leaveRequestData['start_date']} s/d {$leaveRequestData['end_date']} ({$leaveRequestData['total_days']} hari)\n";
+            echo "     📝 {$leaveRequestData['reason']}\n\n";
         }
-        
-        echo "🎉 Successfully created {$createdCount} leave request records!\n\n";
+
+        echo "🎉 Successfully created 7 leave request records!\n\n";
         
         // Tampilkan statistik
         echo "📊 LEAVE REQUEST SUMMARY:\n";
         echo "─────────────────────────────────────\n";
         
-        $totalRequests = LeaveRequest::count();
-        $pendingCount = LeaveRequest::where('status', 'pending')->count();
-        $approvedCount = LeaveRequest::where('status', 'approved')->count();
-        $rejectedCount = LeaveRequest::where('status', 'rejected')->count();
+        $pendingCount = collect($leaveRequests)->where('status', 'pending')->count();
+        $approvedCount = collect($leaveRequests)->where('status', 'approved')->count();
+        $rejectedCount = collect($leaveRequests)->where('status', 'rejected')->count();
         
-        echo "📈 Total Leave Requests: {$totalRequests}\n";
+        echo "📈 Total Leave Requests: 7\n";
         echo "⏳ Pending: {$pendingCount}\n";
         echo "✅ Approved: {$approvedCount}\n";
         echo "❌ Rejected: {$rejectedCount}\n\n";
         
-        // Statistik per leave type
-        echo "📋 BREAKDOWN BY LEAVE TYPE:\n";
-        foreach ($leaveTypes as $type) {
-            $typeCount = LeaveRequest::where('leave_type_id', $type->id)->count();
-            $typeApproved = LeaveRequest::where('leave_type_id', $type->id)->where('status', 'approved')->count();
-            echo "└─ {$type->name}: {$typeCount} requests ({$typeApproved} approved)\n";
-        }
-        
-        echo "\n📅 DATE RANGE:\n";
-        $earliestDate = LeaveRequest::min('start_date');
-        $latestDate = LeaveRequest::max('end_date');
-        echo "└─ From: {$earliestDate} to {$latestDate}\n";
-        
-        echo "\n🏖️ Leave request data generation completed!\n";
+        echo "🏖️ Leave request seeder completed successfully!\n";
     }
 }
