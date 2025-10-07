@@ -42,7 +42,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
-    protected static ?string $navigationGroup = 'Finance';
+    protected static ?string $navigationGroup = 'Shop';
     protected static ?string $navigationLabel = 'Project Wedding';
     protected static ?string $recordTitleAttribute = 'name';
     protected static ?string $navigationIcon = 'heroicon-s-shopping-cart';

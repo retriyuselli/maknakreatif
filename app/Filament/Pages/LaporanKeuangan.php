@@ -21,6 +21,8 @@ class LaporanKeuangan extends Page
     
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static string $view = 'filament.pages.laporan-keuangan';
+    protected static ?string $navigationGroup = 'Finance';
+
 
     public $transaksi = [];
     public $tanggal_awal;

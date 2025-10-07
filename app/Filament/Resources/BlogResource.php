@@ -23,13 +23,9 @@ use Illuminate\Support\Str;
 class BlogResource extends Resource
 {
     protected static ?string $model = Blog::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    
-    protected static ?string $navigationGroup = 'Content Management';
-    
+    protected static ?string $navigationGroup = 'Master';
     protected static ?string $modelLabel = 'Blog Article';
-    
     protected static ?string $pluralModelLabel = 'Blog Articles';
 
     public static function form(Form $form): Form

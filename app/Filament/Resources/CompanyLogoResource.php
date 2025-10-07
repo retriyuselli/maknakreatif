@@ -16,11 +16,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class CompanyLogoResource extends Resource
 {
     protected static ?string $model = CompanyLogo::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
-
     protected static ?string $navigationLabel = 'Company Logos';
-
+    protected static ?string $navigationGroup = 'Master';
     protected static ?string $pluralModelLabel = 'Company Logos';
 
     public static function form(Form $form): Form
@@ -187,5 +185,10 @@ class CompanyLogoResource extends Resource
             'create' => Pages\CreateCompanyLogo::route('/create'),
             'edit' => Pages\EditCompanyLogo::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }
