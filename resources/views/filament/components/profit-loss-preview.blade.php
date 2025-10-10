@@ -133,10 +133,10 @@
             <table class="preview-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">No.</th>
+                        <th style="width: 8%;">Vendor</th>
                         <th style="width: 30%;">Keterangan</th>
                         <th style="width: 15%;">Tanggal</th>
-                        <th style="width: 20%;">Kategori</th>
+                        <th style="width: 20%;">Nama Pengeluaran</th>
                         <th class="text-right" style="width: 17%;">Jumlah</th>
                         <th style="width: 10%;">No. ND</th>
                     </tr>
@@ -144,10 +144,10 @@
                 <tbody>
                     @foreach($expenseOps as $expense)
                         <tr>
-                            <td class="text-center">{{ $loop->iteration }}</td>
+                            <td class="text-center">{{ $expense->vendor->name ?? '-' }}</td>
                             <td>{{ $expense->name ?? 'N/A' }}</td>
                             <td>{{ $expense->date_expense ? \Carbon\Carbon::parse($expense->date_expense)->format('d M Y') : '-' }}</td>
-                            <td>{{ $expense->kategori_transaksi ?? 'Operasional' }}</td>
+                            <td>{{ $expense->name ?? 'Operasional' }}</td>
                             <td class="text-right">Rp {{ number_format($expense->amount ?? 0, 0, ',', '.') }}</td>
                             <td class="text-center">{{ $expense->no_nd ?? '-' }}</td>
                         </tr>
@@ -168,10 +168,10 @@
             <table class="preview-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">No.</th>
+                        <th style="width: 8%;">Vendor</th>
                         <th style="width: 30%;">Keterangan</th>
                         <th style="width: 15%;">Tanggal</th>
-                        <th style="width: 20%;">Kategori</th>
+                        <th style="width: 20%;">Nama Pengeluaran</th>
                         <th class="text-right" style="width: 17%;">Jumlah</th>
                         <th style="width: 10%;">No. ND</th>
                     </tr>
@@ -179,10 +179,10 @@
                 <tbody>
                     @foreach($pengeluaranLain as $expense)
                         <tr>
-                            <td class="text-center">{{ $loop->iteration }}</td>
+                            <td class="text-center">{{ $expense->vendor->name ?? '-' }}</td>
                             <td>{{ $expense->name ?? 'N/A' }}</td>
                             <td>{{ $expense->date_expense ? \Carbon\Carbon::parse($expense->date_expense)->format('d M Y') : '-' }}</td>
-                            <td>{{ $expense->kategori_transaksi ?? 'Lainnya' }}</td>
+                            <td>{{ $expense->name ?? 'Lainnya' }}</td>
                             <td class="text-right">Rp {{ number_format($expense->amount ?? 0, 0, ',', '.') }}</td>
                             <td class="text-center">{{ $expense->no_nd ?? '-' }}</td>
                         </tr>

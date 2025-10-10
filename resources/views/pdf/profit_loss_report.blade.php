@@ -175,7 +175,7 @@
                 <table style="margin-bottom: 20px;">
                     <thead>
                         <tr>
-                            <th style="width: 8%;">No.</th>
+                            <th style="width: 8%;">Vendor</th>
                             <th style="width: 30%;">Keterangan</th>
                             <th style="width: 15%;">Tanggal</th>
                             <th style="width: 20%;">Nama Pengeluaran</th>
@@ -186,7 +186,7 @@
                     <tbody>
                         @foreach($expenseOps as $expense)
                             <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">{{ $expense->vendor->name ?? '-' }}</td>
                                 <td>{{ $expense->name ?? 'N/A' }}</td>
                                 <td>{{ $expense->date_expense ? \Carbon\Carbon::parse($expense->date_expense)->format('d M Y') : '-' }}</td>
                                 <td>{{ $expense->name ?? 'Operasional' }}</td>
@@ -210,7 +210,7 @@
                 <table style="margin-bottom: 20px;">
                     <thead>
                         <tr>
-                            <th style="width: 8%;">No.</th>
+                            <th style="width: 8%;">Vendor</th>
                             <th style="width: 30%;">Keterangan</th>
                             <th style="width: 15%;">Tanggal</th>
                             <th style="width: 20%;">Nama Pengeluaran</th>
@@ -221,7 +221,7 @@
                     <tbody>
                         @foreach($pengeluaranLain as $expense)
                             <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">{{ $expense->vendor->name ?? '-' }}</td>
                                 <td>{{ $expense->name ?? 'N/A' }}</td>
                                 <td>{{ $expense->date_expense ? \Carbon\Carbon::parse($expense->date_expense)->format('d M Y') : '-' }}</td>
                                 <td>{{ $expense->name ?? 'Lainnya' }}</td>

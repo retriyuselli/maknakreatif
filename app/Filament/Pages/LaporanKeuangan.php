@@ -105,11 +105,11 @@ class LaporanKeuangan extends Page
                     });
 
                     // Get additional expenses data (ExpenseOps and PengeluaranLain) 
-                    $expenseOps = \App\Models\ExpenseOps::whereBetween('date_expense', [$startDate, $endDate])
+                    $expenseOps = \App\Models\ExpenseOps::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])
                         ->orderBy('date_expense', 'desc')
                         ->get();
                     
-                    $pengeluaranLain = \App\Models\PengeluaranLain::whereBetween('date_expense', [$startDate, $endDate])
+                    $pengeluaranLain = \App\Models\PengeluaranLain::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])
                         ->orderBy('date_expense', 'desc')
                         ->get();
                     
@@ -195,9 +195,9 @@ class LaporanKeuangan extends Page
             return $order->expenses->sum('amount');
         });
 
-        $expenseOps = ExpenseOps::whereBetween('date_expense', [$startDate, $endDate])
+        $expenseOps = ExpenseOps::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])
             ->orderBy('date_expense', 'desc')->get();
-        $pengeluaranLain = PengeluaranLain::whereBetween('date_expense', [$startDate, $endDate])
+        $pengeluaranLain = PengeluaranLain::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])
             ->orderBy('date_expense', 'desc')->get();
         
         $totalExpenseOps = $expenseOps->sum('amount');

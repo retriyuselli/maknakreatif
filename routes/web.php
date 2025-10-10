@@ -226,8 +226,8 @@ Route::get('/admin/laporan-keuangan/download-pdf-direct', function(\Illuminate\H
             return $order->expenses->sum('amount');
         });
 
-        $expenseOps = \App\Models\ExpenseOps::whereBetween('date_expense', [$startDate, $endDate])->get();
-        $pengeluaranLain = \App\Models\PengeluaranLain::whereBetween('date_expense', [$startDate, $endDate])->get();
+        $expenseOps = \App\Models\ExpenseOps::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])->get();
+        $pengeluaranLain = \App\Models\PengeluaranLain::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])->get();
         
         $reportData = [
             'orders' => $orders,
