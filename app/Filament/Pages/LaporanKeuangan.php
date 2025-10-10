@@ -8,12 +8,18 @@ use App\Models\Expense;
 use App\Models\ExpenseOps;
 use App\Models\PendapatanLain;
 use App\Models\PengeluaranLain;
+use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
+use Filament\Actions;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class LaporanKeuangan extends Page
 {
@@ -41,6 +47,309 @@ class LaporanKeuangan extends Page
         $this->transaksi = $this->getTransaksiGabungan();
         $this->total_masuk = $this->hitungTotalMasuk();
         $this->total_keluar = $this->hitungTotalKeluar();
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('viewProfitLossReport')
+                ->label('Laporan L/R')
+                ->icon('heroicon-o-document-text')
+                ->color('warning')
+                ->modalHeading('Preview Laporan Laba Rugi')
+                ->modalWidth('7xl')
+                ->modalContent(function () {
+                    // Get orders based on current date filters
+                    $startDate = $this->tanggal_awal ?? now()->startOfMonth()->toDateString();
+                    $endDate = $this->tanggal_akhir ?? now()->endOfMonth()->toDateString();
+                    
+                    // Query orders using All Event dates (Lamaran, Akad, Reception)
+                    $query = Order::with(['prospect', 'dataPembayaran', 'expenses'])
+                        ->whereHas('prospect', function ($prospectQuery) use ($startDate, $endDate) {
+                            $prospectQuery->where(function ($dateQuery) use ($startDate, $endDate) {
+                                // Filter by Lamaran Date
+                                $dateQuery->whereBetween('date_lamaran', [$startDate, $endDate])
+                                    // OR Filter by Akad Date  
+                                    ->orWhereBetween('date_akad', [$startDate, $endDate])
+                                    // OR Filter by Reception Date
+                                    ->orWhereBetween('date_resepsi', [$startDate, $endDate]);
+                            });
+                        });
+                    
+                    $orders = $query->get();
+
+                    // --- Sanitize Potential UTF-8 Issues ---
+                    foreach ($orders as $order) {
+                        if ($order->prospect && !mb_check_encoding($order->prospect->name_event ?? '', 'UTF-8')) {
+                            Log::warning("Malformed UTF-8 in prospect->name_event for Order ID: " . $order->id . " | Data: " . ($order->prospect->name_event ?? 'NULL'));
+                            $order->prospect->name_event = iconv('UTF-8', 'UTF-8//IGNORE', $order->prospect->name_event ?? '');
+                        }
+                    }
+                    
+                    if ($orders->isEmpty()) {
+                        Notification::make()
+                            ->warning()
+                            ->title('Tidak Ada Order')
+                            ->body('Tidak ada data order yang memiliki event (Lamaran/Akad/Reception) dalam periode tanggal saat ini untuk membuat laporan L/R.')
+                            ->send();
+                        return;
+                    }
+
+                    // Calculate totals for profit/loss report
+                    $totalPaymentsReceived = $orders->sum(function($order) {
+                        return $order->dataPembayaran->sum('nominal');
+                    });
+                    $totalOrderValue = $orders->sum('grand_total');
+                    $totalActualExpenses = $orders->sum(function($order) {
+                        return $order->expenses->sum('amount');
+                    });
+
+                    // Get additional expenses data (ExpenseOps and PengeluaranLain) 
+                    $expenseOps = \App\Models\ExpenseOps::whereBetween('date_expense', [$startDate, $endDate])
+                        ->orderBy('date_expense', 'desc')
+                        ->get();
+                    
+                    $pengeluaranLain = \App\Models\PengeluaranLain::whereBetween('date_expense', [$startDate, $endDate])
+                        ->orderBy('date_expense', 'desc')
+                        ->get();
+                    
+                    $totalExpenseOps = $expenseOps->sum('amount');
+                    $totalPengeluaranLain = $pengeluaranLain->sum('amount');
+
+                    // Net profit calculation (grand_total - actual expenses)
+                    $netProfitCalculation = $totalOrderValue - $totalActualExpenses;
+
+                    // Prepare data for the PDF view
+                    $reportData = [
+                        'orders' => $orders,
+                        'totalIncome' => $totalPaymentsReceived,
+                        'totalExpenses' => $totalOrderValue, // Grand Total column
+                        'sumAllOrdersPengeluaran' => $totalActualExpenses,
+                        'netProfit' => $netProfitCalculation,
+                        // Additional expenses data
+                        'expenseOps' => $expenseOps,
+                        'pengeluaranLain' => $pengeluaranLain,
+                        'totalExpenseOps' => $totalExpenseOps,
+                        'totalPengeluaranLain' => $totalPengeluaranLain,
+                        'filterStartDate' => $startDate,
+                        'filterEndDate' => $endDate,
+                        'generatedDate' => now()->format('d M Y H:i'),
+                    ];
+
+                    // Return web preview view
+                    return view('filament.components.profit-loss-preview', $reportData);
+                })
+                ->tooltip('Preview laporan Laba Rugi berdasarkan tanggal event (Lamaran/Akad/Reception) dari filter saat ini.')
+                ->visible(function () {
+                    $user = Auth::user();
+                    // Hanya super_admin dan Finance yang bisa melihat tombol ini
+                    return $user && ($user->roles->contains('name', 'super_admin') || $user->roles->contains('name', 'Finance'));
+                }),
+        ];
+    }
+
+    public function downloadPdfReport()
+    {
+        // Log untuk debugging
+        Log::info('downloadPdfReport method called', [
+            'tanggal_awal' => $this->tanggal_awal,
+            'tanggal_akhir' => $this->tanggal_akhir
+        ]);
+        // Get orders based on current date filters
+        $startDate = $this->tanggal_awal ?? now()->startOfMonth()->toDateString();
+        $endDate = $this->tanggal_akhir ?? now()->endOfMonth()->toDateString();
+        
+        $query = Order::with(['prospect', 'dataPembayaran', 'expenses'])
+            ->whereHas('prospect', function ($prospectQuery) use ($startDate, $endDate) {
+                $prospectQuery->where(function ($dateQuery) use ($startDate, $endDate) {
+                    $dateQuery->whereBetween('date_lamaran', [$startDate, $endDate])
+                        ->orWhereBetween('date_akad', [$startDate, $endDate])
+                        ->orWhereBetween('date_resepsi', [$startDate, $endDate]);
+                });
+            });
+        
+        $orders = $query->get();
+
+        foreach ($orders as $order) {
+            if ($order->prospect && !mb_check_encoding($order->prospect->name_event ?? '', 'UTF-8')) {
+                Log::warning("Malformed UTF-8 in prospect->name_event for Order ID: " . $order->id);
+                $order->prospect->name_event = iconv('UTF-8', 'UTF-8//IGNORE', $order->prospect->name_event ?? '');
+            }
+        }
+        
+        if ($orders->isEmpty()) {
+            Notification::make()
+                ->warning()
+                ->title('Tidak Ada Data')
+                ->body('Tidak ada data untuk di-download.')
+                ->send();
+            return;
+        }
+
+        // Calculate totals
+        $totalPaymentsReceived = $orders->sum(function($order) {
+            return $order->dataPembayaran->sum('nominal');
+        });
+        $totalOrderValue = $orders->sum('grand_total');
+        $totalActualExpenses = $orders->sum(function($order) {
+            return $order->expenses->sum('amount');
+        });
+
+        $expenseOps = ExpenseOps::whereBetween('date_expense', [$startDate, $endDate])
+            ->orderBy('date_expense', 'desc')->get();
+        $pengeluaranLain = PengeluaranLain::whereBetween('date_expense', [$startDate, $endDate])
+            ->orderBy('date_expense', 'desc')->get();
+        
+        $totalExpenseOps = $expenseOps->sum('amount');
+        $totalPengeluaranLain = $pengeluaranLain->sum('amount');
+        $netProfitCalculation = $totalOrderValue - $totalActualExpenses;
+
+        $reportData = [
+            'orders' => $orders,
+            'totalIncome' => $totalPaymentsReceived,
+            'totalExpenses' => $totalOrderValue,
+            'sumAllOrdersPengeluaran' => $totalActualExpenses,
+            'netProfit' => $netProfitCalculation,
+            'expenseOps' => $expenseOps,
+            'pengeluaranLain' => $pengeluaranLain,
+            'totalExpenseOps' => $totalExpenseOps,
+            'totalPengeluaranLain' => $totalPengeluaranLain,
+            'filterStartDate' => $startDate,
+            'filterEndDate' => $endDate,
+            'generatedDate' => now()->format('d M Y H:i'),
+        ];
+
+        try {
+            // Generate PDF
+            $pdf = Pdf::loadView('pdf.profit_loss_report', $reportData);
+            $pdfOutput = $pdf->output();
+            $fileName = 'laporan_laba_rugi_' . now()->format('YmdHis') . '.pdf';
+            
+            // Log untuk debugging
+            Log::info('PDF generated successfully', [
+                'filename' => $fileName,
+                'size_bytes' => strlen($pdfOutput),
+                'size_kb' => round(strlen($pdfOutput) / 1024, 2)
+            ]);
+            
+            // Encode ke base64
+            $base64Content = base64_encode($pdfOutput);
+            
+            Log::info('Base64 encoding completed', [
+                'original_size' => strlen($pdfOutput),
+                'encoded_size' => strlen($base64Content)
+            ]);
+            
+            // Use JavaScript to trigger download dengan multiple dispatch methods
+            $this->dispatch('downloadPdf', [
+                'content' => $base64Content,
+                'filename' => $fileName
+            ]);
+            
+            // Juga coba dengan JS langsung untuk memastikan event ter-trigger
+            $this->js("
+                console.log('PHP: Dispatching downloadPdf event for file: $fileName');
+                console.log('PHP: Content length: " . strlen($base64Content) . "');
+                
+                // Try multiple approaches
+                if (window.handlePdfDownload) {
+                    console.log('PHP: Calling handlePdfDownload directly');
+                    window.handlePdfDownload({
+                        content: '$base64Content',
+                        filename: '$fileName'
+                    });
+                } else {
+                    console.log('PHP: handlePdfDownload not available, using event dispatch');
+                    window.dispatchEvent(new CustomEvent('downloadPdf', {
+                        detail: {
+                            content: '$base64Content',
+                            filename: '$fileName'
+                        }
+                    }));
+                }
+            ");
+            
+            Notification::make()
+                ->success()
+                ->title('PDF Berhasil Dibuat')
+                ->body('File sedang didownload: ' . $fileName . ' (' . round(strlen($pdfOutput) / 1024, 2) . ' KB)')
+                ->send();
+                
+        } catch (\Exception $e) {
+            Log::error('PDF generation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            Notification::make()
+                ->danger()
+                ->title('Error')
+                ->body('Gagal membuat PDF: ' . $e->getMessage())
+                ->send();
+        }
+    }
+
+    // Method untuk testing - dapat dihapus setelah testing selesai
+    public function testDownloadPdf()
+    {
+        Log::info('testDownloadPdf called');
+        
+        // Set tanggal ke periode yang ada datanya
+        $this->tanggal_awal = '2025-10-01';
+        $this->tanggal_akhir = '2025-10-31';
+        
+        // Call method download
+        $this->downloadPdfReport();
+        
+        Log::info('testDownloadPdf completed');
+    }
+
+    // Method untuk test langsung tanpa modal
+    public function debugDownloadPdf()
+    {
+        try {
+            Log::info('debugDownloadPdf started');
+            
+            // Set test data
+            $this->tanggal_awal = '2025-10-01';
+            $this->tanggal_akhir = '2025-10-31';
+            
+            // Generate simple test PDF
+            $testData = [
+                'orders' => collect([]),
+                'totalIncome' => 0,
+                'totalExpenses' => 0,
+                'sumAllOrdersPengeluaran' => 0,
+                'netProfit' => 0,
+                'expenseOps' => collect([]),
+                'pengeluaranLain' => collect([]),
+                'totalExpenseOps' => 0,
+                'totalPengeluaranLain' => 0,
+                'filterStartDate' => '2025-10-01',
+                'filterEndDate' => '2025-10-31',
+                'generatedDate' => now()->format('d M Y H:i'),
+            ];
+            
+            $pdf = Pdf::loadView('pdf.profit_loss_report', $testData);
+            $pdfOutput = $pdf->output();
+            $fileName = 'test_laporan_laba_rugi_' . now()->format('YmdHis') . '.pdf';
+            
+            // Langsung return file untuk download
+            return response()->streamDownload(function () use ($pdfOutput) {
+                echo $pdfOutput;
+            }, $fileName, [
+                'Content-Type' => 'application/pdf',
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('debugDownloadPdf failed: ' . $e->getMessage());
+            
+            Notification::make()
+                ->danger()
+                ->title('Debug PDF Error')
+                ->body('Error: ' . $e->getMessage())
+                ->send();
+        }
     }
 
     public function getTransaksiGabungan(): Collection

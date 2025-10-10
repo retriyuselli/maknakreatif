@@ -165,6 +165,96 @@
         </tfoot>
     </table>
 
+    {{-- <h2>Detail Pengeluaran</h2> --}}
+    @if(isset($expenseOps) && $expenseOps->isNotEmpty() || isset($pengeluaranLain) && $pengeluaranLain->isNotEmpty())
+        <div style="page-break-inside: avoid; margin-top: 20px;">
+            <h2 style="margin-bottom: 15px;">Detail Pengeluaran Operasional & Lainnya</h2>
+            
+            @if(isset($expenseOps) && $expenseOps->isNotEmpty())
+                <h3 style="margin-bottom: 10px; color: #333;">Pengeluaran Operasional</h3>
+                <table style="margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">No.</th>
+                            <th style="width: 30%;">Keterangan</th>
+                            <th style="width: 15%;">Tanggal</th>
+                            <th style="width: 20%;">Nama Pengeluaran</th>
+                            <th class="text-right" style="width: 17%;">Jumlah</th>
+                            <th style="width: 10%;">No. ND</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($expenseOps as $expense)
+                            <tr>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td>{{ $expense->name ?? 'N/A' }}</td>
+                                <td>{{ $expense->date_expense ? \Carbon\Carbon::parse($expense->date_expense)->format('d M Y') : '-' }}</td>
+                                <td>{{ $expense->name ?? 'Operasional' }}</td>
+                                <td class="text-right number">Rp {{ number_format($expense->amount ?? 0, 0, ',', '.') }}</td>
+                                <td class="text-center">{{ $expense->no_nd ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="4" class="text-left"><strong>Sub Total Operasional:</strong></td>
+                            <td class="text-right number"><strong>Rp {{ number_format($totalExpenseOps ?? 0, 0, ',', '.') }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            @endif
+
+            @if(isset($pengeluaranLain) && $pengeluaranLain->isNotEmpty())
+                <h3 style="margin-bottom: 10px; color: #333;">Pengeluaran Lainnya</h3>
+                <table style="margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">No.</th>
+                            <th style="width: 30%;">Keterangan</th>
+                            <th style="width: 15%;">Tanggal</th>
+                            <th style="width: 20%;">Nama Pengeluaran</th>
+                            <th class="text-right" style="width: 17%;">Jumlah</th>
+                            <th style="width: 10%;">No. ND</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($pengeluaranLain as $expense)
+                            <tr>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td>{{ $expense->name ?? 'N/A' }}</td>
+                                <td>{{ $expense->date_expense ? \Carbon\Carbon::parse($expense->date_expense)->format('d M Y') : '-' }}</td>
+                                <td>{{ $expense->name ?? 'Lainnya' }}</td>
+                                <td class="text-right number">Rp {{ number_format($expense->amount ?? 0, 0, ',', '.') }}</td>
+                                <td class="text-center">{{ $expense->no_nd ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="4" class="text-left"><strong>Sub Total Lainnya:</strong></td>
+                            <td class="text-right number"><strong>Rp {{ number_format($totalPengeluaranLain ?? 0, 0, ',', '.') }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            @endif
+
+            @php
+                $grandTotalExpenses = ($totalExpenseOps ?? 0) + ($totalPengeluaranLain ?? 0);
+            @endphp
+            <table style="margin-bottom: 20px;">
+                <tfoot>
+                    <tr class="total-row" style="background-color: #f0f0f0;">
+                        <td colspan="4" class="text-left"><strong>TOTAL PENGELUARAN OPS & LAINNYA:</strong></td>
+                        <td class="text-right number"><strong>Rp {{ number_format($grandTotalExpenses, 0, ',', '.') }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    @endif
+
     {{-- Note: The tfoot above sums the 4th, 5th, and 7th columns.
          The sum of the 6th column (Total Pengeluaran) is not currently displayed in the tfoot. --}}
     {{-- Pastikan variabel $eventSummary dikirim dari Controller --}}

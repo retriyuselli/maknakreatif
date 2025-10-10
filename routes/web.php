@@ -199,6 +199,65 @@ Route::get('/laporan-keuangan/download-pdf', [App\Filament\Pages\LaporanKeuangan
     ->middleware('auth')
     ->name('laporan-keuangan.download-pdf');
 
+// Route untuk direct download PDF L/R dari modal
+Route::get('/admin/laporan-keuangan/download-pdf-direct', function(\Illuminate\Http\Request $request) {
+    try {
+        $startDate = $request->input('startDate', '2025-10-01');
+        $endDate = $request->input('endDate', '2025-10-31');
+        
+        // Query orders using All Event dates
+        $query = \App\Models\Order::with(['prospect', 'dataPembayaran', 'expenses'])
+            ->whereHas('prospect', function ($prospectQuery) use ($startDate, $endDate) {
+                $prospectQuery->where(function ($dateQuery) use ($startDate, $endDate) {
+                    $dateQuery->whereBetween('date_lamaran', [$startDate, $endDate])
+                        ->orWhereBetween('date_akad', [$startDate, $endDate])
+                        ->orWhereBetween('date_resepsi', [$startDate, $endDate]);
+                });
+            });
+        
+        $orders = $query->get();
+        
+        // Calculate totals
+        $totalPaymentsReceived = $orders->sum(function($order) {
+            return $order->dataPembayaran->sum('nominal');
+        });
+        $totalOrderValue = $orders->sum('grand_total');
+        $totalActualExpenses = $orders->sum(function($order) {
+            return $order->expenses->sum('amount');
+        });
+
+        $expenseOps = \App\Models\ExpenseOps::whereBetween('date_expense', [$startDate, $endDate])->get();
+        $pengeluaranLain = \App\Models\PengeluaranLain::whereBetween('date_expense', [$startDate, $endDate])->get();
+        
+        $reportData = [
+            'orders' => $orders,
+            'totalIncome' => $totalPaymentsReceived,
+            'totalExpenses' => $totalOrderValue,
+            'sumAllOrdersPengeluaran' => $totalActualExpenses,
+            'netProfit' => $totalOrderValue - $totalActualExpenses,
+            'expenseOps' => $expenseOps,
+            'pengeluaranLain' => $pengeluaranLain,
+            'totalExpenseOps' => $expenseOps->sum('amount'),
+            'totalPengeluaranLain' => $pengeluaranLain->sum('amount'),
+            'filterStartDate' => $startDate,
+            'filterEndDate' => $endDate,
+            'generatedDate' => now()->format('d M Y H:i'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.profit_loss_report', $reportData);
+        $fileName = 'laporan_laba_rugi_' . now()->format('YmdHis') . '.pdf';
+        
+        return response()->streamDownload(function () use ($pdf) {
+            echo $pdf->output();
+        }, $fileName, ['Content-Type' => 'application/pdf']);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+})
+->middleware('auth')
+->name('laporan-keuangan.download-pdf-direct');
+
 // SOP ROUTES
 // Route untuk menampilkan daftar SOP (untuk user biasa)
 Route::get('/sop', [SopViewController::class, 'index'])

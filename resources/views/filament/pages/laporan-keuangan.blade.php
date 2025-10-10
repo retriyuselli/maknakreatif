@@ -390,12 +390,236 @@
 
     {{-- JavaScript untuk handle download --}}
     <script>
+        // Function untuk handle download PDF
+        function handlePdfDownload(data) {
+            console.log('handlePdfDownload called with data:', data);
+            
+            try {
+                // Pastikan data tersedia - dengan logging yang lebih detail
+                if (!data) {
+                    console.error('Data is null or undefined:', data);
+                    return false;
+                }
+                
+                if (!data.content) {
+                    console.error('Data.content is missing:', data);
+                    return false;
+                }
+                
+                if (!data.filename) {
+                    console.error('Data.filename is missing:', data);
+                    return false;
+                }
+                
+                console.log('Processing PDF download for:', data.filename);
+                console.log('Content length:', data.content.length);
+                
+                // Decode base64 content
+                const pdfContent = atob(data.content);
+                const bytes = new Uint8Array(pdfContent.length);
+                for (let i = 0; i < pdfContent.length; i++) {
+                    bytes[i] = pdfContent.charCodeAt(i);
+                }
+                
+                console.log('PDF bytes created, length:', bytes.length);
+                
+                // Create blob dan download
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                
+                console.log('Blob created, URL:', url);
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                
+                console.log('Download link created, clicking...');
+                a.click();
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    console.log('Cleanup completed');
+                }, 100);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Error downloading PDF:', error);
+                // Hanya tampilkan alert jika ini benar-benar error critical
+                if (error.message.includes('atob') || error.message.includes('Blob')) {
+                    alert('Gagal mendownload PDF: ' + error.message);
+                }
+                return false;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up event listeners...');
+            
+            // Handle download PDF lama (untuk compatibility)
             Livewire.on('download-pdf', function(data) {
                 window.open(data.url, '_blank');
             });
+
+            // Handle custom downloadPdf event
+            window.addEventListener('downloadPdf', function(event) {
+                console.log('Custom downloadPdf event received:', event.detail);
+                handlePdfDownload(event.detail);
+            });
+
+                // Handle downloadPdfFromModal event
+            window.addEventListener('downloadPdfFromModal', function(event) {
+                console.log('downloadPdfFromModal event received from modal');
+                
+                // Cari dan panggil method Livewire
+                const wireComponent = document.querySelector('[wire\\:id]');
+                if (wireComponent && typeof Livewire !== 'undefined') {
+                    const wireId = wireComponent.getAttribute('wire:id');
+                    if (Livewire.find && Livewire.find(wireId)) {
+                        console.log('Calling downloadPdfReport from modal event');
+                        Livewire.find(wireId).call('downloadPdfReport');
+                    }
+                }
+            });
+
+            // Handle postMessage from modal iframe/content
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'downloadLaporanPdf' && event.data.action === 'triggerDownload') {
+                    console.log('Received postMessage to trigger download');
+                    
+                    // Call the global trigger function
+                    if (window.triggerLaporanDownload) {
+                        const success = window.triggerLaporanDownload();
+                        if (success) {
+                            // Send success message back to modal
+                            event.source.postMessage({
+                                type: 'pdfDownloadComplete',
+                                success: true
+                            }, '*');
+                        }
+                    }
+                }
+            });
+
+            // Handle custom event for Laporan download
+            document.addEventListener('triggerLaporanDownload', function(event) {
+                console.log('triggerLaporanDownload custom event received');
+                if (window.triggerLaporanDownload) {
+                    window.triggerLaporanDownload();
+                }
+            });
+
+            // Handle PDF download dari modal L/R - Livewire v3
+            document.addEventListener('livewire:init', () => {
+                console.log('Livewire init, setting up downloadPdf listener...');
+                
+                Livewire.on('downloadPdf', (data) => {
+                    console.log('Livewire v3 downloadPdf event received:', data);
+                    handlePdfDownload(data);
+                });
+            });
         });
+
+        // Backup method untuk Livewire v2 compatibility
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof Livewire !== 'undefined' && Livewire.on) {
+                console.log('Setting up Livewire v2 compatibility...');
+                
+                Livewire.on('downloadPdf', function(data) {
+                    console.log('Livewire v2 downloadPdf event received:', data);
+                    handlePdfDownload(data);
+                });
+            }
+        });
+
+        // Global functions untuk manual testing dan PHP integration
+        window.testPdfDownload = function(content, filename) {
+            console.log('Manual test PDF download...');
+            return handlePdfDownload({
+                content: content,
+                filename: filename
+            });
+        };
+        
+        // Make handlePdfDownload available globally for PHP to call
+        window.handlePdfDownload = handlePdfDownload;
+
+        // Global function untuk trigger download dari modal
+        window.triggerLaporanDownload = function() {
+            console.log('triggerLaporanDownload called from modal');
+            
+            try {
+                // Cari Livewire component LaporanKeuangan
+                const laporanComponent = document.querySelector('[wire\\:id]');
+                if (!laporanComponent) {
+                    console.error('Livewire component not found');
+                    alert('Error: Komponen Livewire tidak ditemukan');
+                    return false;
+                }
+                
+                const wireId = laporanComponent.getAttribute('wire:id');
+                console.log('Found Livewire component with ID:', wireId);
+                
+                // Method 1: Livewire.find
+                if (typeof Livewire !== 'undefined' && Livewire.find) {
+                    const component = Livewire.find(wireId);
+                    if (component) {
+                        console.log('Calling downloadPdfReport via Livewire.find');
+                        component.call('downloadPdfReport');
+                        return true;
+                    }
+                }
+                
+                // Method 2: Direct __livewire call
+                if (laporanComponent.__livewire) {
+                    console.log('Calling downloadPdfReport via __livewire');
+                    laporanComponent.__livewire.call('downloadPdfReport');
+                    return true;
+                }
+                
+                // Method 3: Simulate click on global hidden button
+                const globalHiddenBtn = document.getElementById('globalHiddenDownloadBtn');
+                if (globalHiddenBtn) {
+                    console.log('Triggering global hidden button click');
+                    globalHiddenBtn.click();
+                    return true;
+                }
+                
+                // Method 4: Simulate click on modal hidden button
+                const hiddenBtn = document.getElementById('hiddenDownloadBtn');
+                if (hiddenBtn) {
+                    console.log('Triggering modal hidden button click');
+                    hiddenBtn.click();
+                    return true;
+                }
+                
+                console.error('No available method to trigger download');
+                alert('Error: Tidak dapat memicu download PDF');
+                return false;
+                
+            } catch (error) {
+                console.error('Error in triggerLaporanDownload:', error);
+                alert('Error: ' + error.message);
+                return false;
+            }
+        };
     </script>
+
+    {{-- Hidden button untuk download L/R dari modal --}}
+    <div style="display: none;">
+        <button 
+            id="globalHiddenDownloadBtn"
+            wire:click="downloadPdfReport"
+            type="button"
+        >
+            Global Hidden L/R Download Button
+        </button>
+    </div>
 
     </div> {{-- Close Summary Cards div dan main container div --}}
 </x-filament::page>
