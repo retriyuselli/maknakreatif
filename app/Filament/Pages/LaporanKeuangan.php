@@ -112,9 +112,15 @@ class LaporanKeuangan extends Page
                     $pengeluaranLain = \App\Models\PengeluaranLain::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])
                         ->orderBy('date_expense', 'desc')
                         ->get();
+
+                    // Get pendapatan lain data
+                    $pendapatanLain = \App\Models\PendapatanLain::with('vendor')->whereBetween('tgl_bayar', [$startDate, $endDate])
+                        ->orderBy('tgl_bayar', 'desc')
+                        ->get();
                     
                     $totalExpenseOps = $expenseOps->sum('amount');
                     $totalPengeluaranLain = $pengeluaranLain->sum('amount');
+                    $totalPendapatanLain = $pendapatanLain->sum('nominal');
 
                     // Net profit calculation (grand_total - actual expenses)
                     $netProfitCalculation = $totalOrderValue - $totalActualExpenses;
@@ -129,8 +135,10 @@ class LaporanKeuangan extends Page
                         // Additional expenses data
                         'expenseOps' => $expenseOps,
                         'pengeluaranLain' => $pengeluaranLain,
+                        'pendapatanLain' => $pendapatanLain,
                         'totalExpenseOps' => $totalExpenseOps,
                         'totalPengeluaranLain' => $totalPengeluaranLain,
+                        'totalPendapatanLain' => $totalPendapatanLain,
                         'filterStartDate' => $startDate,
                         'filterEndDate' => $endDate,
                         'generatedDate' => now()->format('d M Y H:i'),

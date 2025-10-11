@@ -228,6 +228,7 @@ Route::get('/admin/laporan-keuangan/download-pdf-direct', function(\Illuminate\H
 
         $expenseOps = \App\Models\ExpenseOps::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])->get();
         $pengeluaranLain = \App\Models\PengeluaranLain::with('vendor')->whereBetween('date_expense', [$startDate, $endDate])->get();
+        $pendapatanLain = \App\Models\PendapatanLain::with('vendor')->whereBetween('tgl_bayar', [$startDate, $endDate])->get();
         
         $reportData = [
             'orders' => $orders,
@@ -237,8 +238,10 @@ Route::get('/admin/laporan-keuangan/download-pdf-direct', function(\Illuminate\H
             'netProfit' => $totalOrderValue - $totalActualExpenses,
             'expenseOps' => $expenseOps,
             'pengeluaranLain' => $pengeluaranLain,
+            'pendapatanLain' => $pendapatanLain,
             'totalExpenseOps' => $expenseOps->sum('amount'),
             'totalPengeluaranLain' => $pengeluaranLain->sum('amount'),
+            'totalPendapatanLain' => $pendapatanLain->sum('nominal'),
             'filterStartDate' => $startDate,
             'filterEndDate' => $endDate,
             'generatedDate' => now()->format('d M Y H:i'),

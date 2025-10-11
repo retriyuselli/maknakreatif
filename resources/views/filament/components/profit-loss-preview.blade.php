@@ -124,6 +124,39 @@
         </tfoot>
     </table>
 
+    <!-- Detail Pendapatan Lain Section -->
+    @if(isset($pendapatanLain) && $pendapatanLain->isNotEmpty())
+        <div class="section-title">Detail Pendapatan Lain</div>
+        <table class="preview-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Vendor</th>
+                    <th style="width: 25%;">Nama Pendapatan</th>
+                    <th style="width: 15%;">Tanggal</th>
+                    <th style="width: 30%;">Keterangan</th>
+                    <th class="text-right" style="width: 20%;">Nominal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($pendapatanLain as $pendapatan)
+                    <tr>
+                        <td class="text-center">{{ $pendapatan->vendor->name ?? '-' }}</td>
+                        <td>{{ $pendapatan->name ?? 'N/A' }}</td>
+                        <td>{{ $pendapatan->tgl_bayar ? \Carbon\Carbon::parse($pendapatan->tgl_bayar)->format('d M Y') : '-' }}</td>
+                        <td>{{ $pendapatan->keterangan ?? '-' }}</td>
+                        <td class="text-right">Rp {{ number_format($pendapatan->nominal ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="4" class="text-left"><strong>Total Pendapatan Lain:</strong></td>
+                    <td class="text-right"><strong>Rp {{ number_format($totalPendapatanLain ?? 0, 0, ',', '.') }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    @endif
+
     <!-- Detail Pengeluaran Section -->
     @if(isset($expenseOps) && $expenseOps->isNotEmpty() || isset($pengeluaranLain) && $pengeluaranLain->isNotEmpty())
         <div class="section-title">Detail Pengeluaran Operasional & Lainnya111</div>
@@ -212,12 +245,79 @@
         </table>
     @endif
 
+    <!-- Laporan Laba Rugi -->
+    @php
+        // Hitung Total Pendapatan (Order + Pendapatan Lain)
+        $totalPendapatanKeseluruhan = ($totalIncome ?? 0) + ($totalPendapatanLain ?? 0);
+        
+        // Hitung Total Pengeluaran (Wedding + Ops & Lain)
+        $grandTotalExpenses = ($totalExpenseOps ?? 0) + ($totalPengeluaranLain ?? 0);
+        $totalPengeluaranKeseluruhan = ($sumAllOrdersPengeluaran ?? 0) + $grandTotalExpenses;
+        
+        // Hitung Laba Rugi Final
+        $labaRugiFinal = $totalPendapatanKeseluruhan - $totalPengeluaranKeseluruhan;
+    @endphp
+    
+    <div class="section-title">Laporan Laba Rugi</div>
+    <table class="preview-table">
+        <thead>
+            <tr style="background-color: #007bff; color: white;">
+                <th style="width: 70%;" class="text-left">Komponen</th>
+                <th style="width: 30%;" class="text-right">Jumlah</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- PENDAPATAN -->
+            <tr style="background-color: #e8f5e8;">
+                <td><strong>TOTAL PENDAPATAN</strong></td>
+                <td class="text-right"><strong>Rp {{ number_format($totalPendapatanKeseluruhan, 0, ',', '.') }}</strong></td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">- Pemasukan dari Order</td>
+                <td class="text-right">Rp {{ number_format($totalIncome ?? 0, 0, ',', '.') }}</td>
+            </tr>
+            @if(isset($totalPendapatanLain) && $totalPendapatanLain > 0)
+                <tr>
+                    <td style="padding-left: 20px;">- Pendapatan Lain</td>
+                    <td class="text-right">Rp {{ number_format($totalPendapatanLain, 0, ',', '.') }}</td>
+                </tr>
+            @endif
+            
+            <!-- PENGELUARAN -->
+            <tr style="background-color: #ffe8e8;">
+                <td><strong>TOTAL PENGELUARAN</strong></td>
+                <td class="text-right"><strong>Rp {{ number_format($totalPengeluaranKeseluruhan, 0, ',', '.') }}</strong></td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">- Pengeluaran Wedding</td>
+                <td class="text-right">Rp {{ number_format($sumAllOrdersPengeluaran ?? 0, 0, ',', '.') }}</td>
+            </tr>
+            @if(isset($grandTotalExpenses) && $grandTotalExpenses > 0)
+                <tr>
+                    <td style="padding-left: 20px;">- Pengeluaran Ops & Lainnya</td>
+                    <td class="text-right">Rp {{ number_format($grandTotalExpenses, 0, ',', '.') }}</td>
+                </tr>
+            @endif
+        </tbody>
+        <tfoot>
+            <tr class="total-row" style="background-color: {{ $labaRugiFinal >= 0 ? '#d4edda' : '#f8d7da' }};">
+                <td><strong>LABA / RUGI BERSIH</strong></td>
+                <td class="text-right {{ $labaRugiFinal >= 0 ? 'profit' : 'loss' }}">
+                    <strong>Rp {{ number_format($labaRugiFinal, 0, ',', '.') }}</strong>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+    
     <!-- Summary Information -->
     <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
         <h4 style="margin-top: 0;">Ringkasan Laporan</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <div>
                 <strong>Total Pemasukan:</strong> Rp {{ number_format($totalIncome ?? 0, 0, ',', '.') }}<br>
+                @if(isset($totalPendapatanLain) && $totalPendapatanLain > 0)
+                    <strong>Total Pendapatan Lain:</strong> Rp {{ number_format($totalPendapatanLain, 0, ',', '.') }}<br>
+                @endif
                 <strong>Total Pengeluaran Wedding:</strong> Rp {{ number_format($sumAllOrdersPengeluaran ?? 0, 0, ',', '.') }}<br>
                 @if(isset($grandTotalExpenses))
                     <strong>Total Pengeluaran Ops & Lain:</strong> Rp {{ number_format($grandTotalExpenses, 0, ',', '.') }}<br>
