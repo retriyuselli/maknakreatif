@@ -126,7 +126,7 @@
 
     <!-- Detail Pengeluaran Section -->
     @if(isset($expenseOps) && $expenseOps->isNotEmpty() || isset($pengeluaranLain) && $pengeluaranLain->isNotEmpty())
-        <div class="section-title">Detail Pengeluaran Operasional & Lainnya</div>
+        <div class="section-title">Detail Pengeluaran Operasional & Lainnya111</div>
         
         @if(isset($expenseOps) && $expenseOps->isNotEmpty())
             <div class="sub-title">Pengeluaran Operasional</div>

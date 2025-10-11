@@ -6,23 +6,22 @@
     <title>Laporan Laba Rugi</title> {{-- Judul ini untuk metadata browser saat HTML dirender, tidak langsung ke PDF --}}
     <style>
         @font-face {
-            font-family: 'Poppins';
+            font-family: 'Noto Sans';
             font-style: normal;
             font-weight: 400;
-            src: url('{{ storage_path('fonts/Poppins-Regular.ttf') }}') format('truetype');
+            src: url('{{ storage_path('fonts/NotoSans-Regular.ttf') }}') format('truetype');
         }
         @font-face {
-            font-family: 'Poppins';
+            font-family: 'Noto Sans';
             font-style: normal;
             font-weight: 700; /* bold */
-            src: url('{{ storage_path('fonts/Poppins-Bold.ttf') }}') format('truetype');
+            src: url('{{ storage_path('fonts/NotoSans-Bold.ttf') }}') format('truetype');
         }
-        // Jika Anda membutuhkan berat lain, tambahkan @font-face serupa:
         @font-face {
-            font-family: 'Poppins';
+            font-family: 'Noto Sans';
             font-style: normal;
-            font-weight: 600; // SemiBold
-            src: url('{{ storage_path('fonts/Poppins-SemiBold.ttf') }}') format('truetype');
+            font-weight: 600; /* SemiBold */
+            src: url('{{ storage_path('fonts/NotoSans-SemiBold.ttf') }}') format('truetype');
         }
         .container {
             width: 100%; /* Full width for PDF */
@@ -31,10 +30,10 @@
             box-sizing: border-box;
             }
 
-        body { font-family: 'Poppins', 'Helvetica', 'Arial', sans-serif; font-size: 10px; line-height: 1; color: #333; }
+        body { font-family: 'Noto Sans', 'Helvetica', 'Arial', sans-serif; font-size: 10px; line-height: 1; color: #333; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
         th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
-        th { background-color: #e9e9e9; font-weight: 700; /* Menggunakan berat bold dari Poppins */ }
+        th { background-color: #e9e9e9; font-weight: 700; /* Menggunakan berat bold dari Noto Sans */ }
         .total-row td { font-weight: bold; background-color: #f5f5f5; }
         .summary { margin-top: 20px; padding: 15px; border: 1px solid #eee; background-color: #fdfdfd; }
         .summary h3 { margin-top: 0; font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px;}
