@@ -35,7 +35,7 @@ class Vendor extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function vendors(): HasMany
+    public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
     }
@@ -55,15 +55,54 @@ class Vendor extends Model
         return $this->hasMany(NotaDinasDetail::class);
     }
 
+    public function productPenambahans(): HasMany
+    {
+        return $this->hasMany(ProductPenambahan::class);
+    }
+
+    /**
+     * Get usage status of the vendor
+     */
+    public function getUsageStatusAttribute(): string
+    {
+        $productCount = $this->productVendors_count ?? $this->productVendors()->count();
+        $expenseCount = $this->expenses_count ?? $this->expenses()->count();
+        $notaDinasCount = $this->nota_dinas_details_count ?? $this->notaDinasDetails()->count();
+        $productPenambahanCount = $this->product_penambahans_count ?? $this->productPenambahans()->count();
+        
+        return ($productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0 || $productPenambahanCount > 0) 
+            ? 'In Use' 
+            : 'Available';
+    }
+
+    /**
+     * Get detailed usage information
+     */
+    public function getUsageDetailsAttribute(): array
+    {
+        $productCount = $this->productVendors_count ?? $this->productVendors()->count();
+        $expenseCount = $this->expenses_count ?? $this->expenses()->count();
+        $notaDinasCount = $this->nota_dinas_details_count ?? $this->notaDinasDetails()->count();
+        $productPenambahanCount = $this->product_penambahans_count ?? $this->productPenambahans()->count();
+        
+        return [
+            'productCount' => $productCount,
+            'expenseCount' => $expenseCount,
+            'notaDinasCount' => $notaDinasCount,
+            'productPenambahanCount' => $productPenambahanCount,
+        ];
+    }
+
     /**
      * Override delete method to check for dependencies
      */
     public function delete()
     {
         // Check if vendor is used in products
-        $productVendorCount = $this->productVendors()->count();
-        $expenseCount = $this->vendors()->count(); // expenses relationship
-        $notaDinasCount = $this->notaDinasDetails()->count(); // nota dinas details relationship
+        $usageDetails = $this->usage_details;
+        $productVendorCount = $usageDetails['productCount'];
+        $expenseCount = $usageDetails['expenseCount'];
+        $notaDinasCount = $usageDetails['notaDinasCount'];
         
         if ($productVendorCount > 0 || $expenseCount > 0 || $notaDinasCount > 0) {
             $details = [];

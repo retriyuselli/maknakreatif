@@ -32,10 +32,7 @@ class ViewVendor extends ViewRecord
                     $record = $this->getRecord();
                     if (!$record) return false;
                     
-                    $productCount = $record->productVendors()->count();
-                    $expenseCount = $record->vendors()->count();
-                    $notaDinasCount = $record->notaDinasDetails()->count();
-                    return $productCount === 0 && $expenseCount === 0 && $notaDinasCount === 0;
+                    return $record->usage_status === 'Available';
                 })
                 ->before(function () {
                     $record = $this->getRecord();
@@ -80,20 +77,17 @@ class ViewVendor extends ViewRecord
                     }
 
                     // Double check for associations
-                    $productCount = $record->productVendors()->count();
-                    $expenseCount = $record->vendors()->count();
-                    $notaDinasCount = $record->notaDinasDetails()->count();
-                    
-                    if ($productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0) {
+                    if ($record->usage_status === 'In Use') {
+                        $usageDetails = $record->usage_details;
                         $details = [];
-                        if ($productCount > 0) {
-                            $details[] = "{$productCount} product(s)";
+                        if ($usageDetails['productCount'] > 0) {
+                            $details[] = "{$usageDetails['productCount']} product(s)";
                         }
-                        if ($expenseCount > 0) {
-                            $details[] = "{$expenseCount} expense(s)";
+                        if ($usageDetails['expenseCount'] > 0) {
+                            $details[] = "{$usageDetails['expenseCount']} expense(s)";
                         }
-                        if ($notaDinasCount > 0) {
-                            $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                        if ($usageDetails['notaDinasCount'] > 0) {
+                            $details[] = "{$usageDetails['notaDinasCount']} nota dinas detail(s)";
                         }
                         
                         Notification::make()
@@ -172,26 +166,21 @@ class ViewVendor extends ViewRecord
                     $record = $this->getRecord();
                     if (!$record) return false;
                     
-                    $productCount = $record->productVendors()->count();
-                    $expenseCount = $record->vendors()->count();
-                    $notaDinasCount = $record->notaDinasDetails()->count();
-                    return $productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0;
+                    return $record->usage_status === 'In Use';
                 })
                 ->action(function () {
                     $record = $this->getRecord();
-                    $productCount = $record->productVendors()->count();
-                    $expenseCount = $record->vendors()->count();
-                    $notaDinasCount = $record->notaDinasDetails()->count();
+                    $usageDetails = $record->usage_details;
                     
                     $details = [];
-                    if ($productCount > 0) {
-                        $details[] = "{$productCount} product(s)";
+                    if ($usageDetails['productCount'] > 0) {
+                        $details[] = "{$usageDetails['productCount']} product(s)";
                     }
-                    if ($expenseCount > 0) {
-                        $details[] = "{$expenseCount} expense(s)";
+                    if ($usageDetails['expenseCount'] > 0) {
+                        $details[] = "{$usageDetails['expenseCount']} expense(s)";
                     }
-                    if ($notaDinasCount > 0) {
-                        $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                    if ($usageDetails['notaDinasCount'] > 0) {
+                        $details[] = "{$usageDetails['notaDinasCount']} nota dinas detail(s)";
                     }
                     
                     Notification::make()

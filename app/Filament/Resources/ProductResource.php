@@ -261,6 +261,12 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->query(
+                static::getEloquentQuery()->with([
+                    'items.vendor:id,name,harga_publish,harga_vendor,description',
+                    'penambahanHarga.vendor:id,name,harga_publish,harga_vendor,description'
+                ])
+            )
             ->poll('5s')
             ->defaultPaginationPageOption(25)
             ->columns([
@@ -669,7 +675,7 @@ class ProductResource extends Resource
                         if (!$vendorId) {
                             return null;
                         }
-                        $vendor = Vendor::find($vendorId);
+                        $vendor = static::getVendorData($vendorId);
                         return $vendor ? VendorResource::getUrl('edit', ['record' => $vendor]) : null;
                     }, shouldOpenInNewTab: true)
                     ->hidden(fn (array $arguments, Repeater $component): bool => blank($component->getRawItemState($arguments['item'])['vendor_id'] ?? null)),
@@ -678,7 +684,7 @@ class ProductResource extends Resource
             ->collapsed()
             ->itemLabel(fn (array $state): ?string => 
                 $state['vendor_id'] 
-                    ? Vendor::find($state['vendor_id'])?->name ?? 'Unnamed Vendor'
+                    ? static::getVendorData($state['vendor_id'])?->name ?? 'Unnamed Vendor'
                     : 'New Facility'
             )
             ->reorderable()
@@ -724,9 +730,25 @@ class ProductResource extends Resource
             ->columns(1);
     }
 
+    /**
+     * Cache for vendor data to avoid repeated database queries
+     */
+    protected static array $vendorCache = [];
+
+    /**
+     * Get vendor data with caching to optimize performance
+     */
+    protected static function getVendorData($vendorId): ?object
+    {
+        if (!isset(static::$vendorCache[$vendorId])) {
+            static::$vendorCache[$vendorId] = Vendor::find($vendorId);
+        }
+        return static::$vendorCache[$vendorId];
+    }
+
     protected static function updateVendorData(Set $set, $vendorId): void
     {
-        $vendor = Vendor::find($vendorId);
+        $vendor = static::getVendorData($vendorId);
         if ($vendor) {
             $set('harga_publish', $vendor->harga_publish);
             $set('harga_vendor', $vendor->harga_vendor);
@@ -736,7 +758,7 @@ class ProductResource extends Resource
 
     protected static function updateAdditionVendorData(Set $set, $vendorId): void
     {
-        $vendor = Vendor::find($vendorId);
+        $vendor = static::getVendorData($vendorId);
         if ($vendor) {
             $set('harga_publish', $vendor->harga_publish);
             $set('harga_vendor', $vendor->harga_vendor);
@@ -997,7 +1019,7 @@ class ProductResource extends Resource
                         if (!$vendorId) {
                             return null;
                         }
-                        $vendor = Vendor::find($vendorId);
+                        $vendor = static::getVendorData($vendorId);
                         return $vendor ? VendorResource::getUrl('edit', ['record' => $vendor]) : null;
                     }, shouldOpenInNewTab: true)
                     ->hidden(fn (array $arguments, Repeater $component): bool => blank($component->getRawItemState($arguments['item'])['vendor_id'] ?? null)),
@@ -1006,7 +1028,7 @@ class ProductResource extends Resource
             ->collapsed()
             ->itemLabel(fn (array $state): ?string => 
                 $state['vendor_id'] 
-                    ? Vendor::find($state['vendor_id'])?->name ?? 'Unnamed Vendor'
+                    ? static::getVendorData($state['vendor_id'])?->name ?? 'Unnamed Vendor'
                     : 'New Addition Item'
             )
             ->reorderable()
@@ -1077,10 +1099,20 @@ class ProductResource extends Resource
             ->withSum('orderItems as total_quantity_sold', 'quantity');
     }
 
+    /**
+     * Clear vendor cache to free memory
+     */
+    protected static function clearVendorCache(): void
+    {
+        static::$vendorCache = [];
+    }
+
     // Ensure these lifecycle hooks call the server-side recalculation method
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return static::mutateFormDataBeforeSave($data);
+        $result = static::mutateFormDataBeforeSave($data);
+        static::clearVendorCache(); // Clear cache after processing
+        return $result;
     }
 
     protected function mutateFormDataBeforeUpdate(array $data): array
@@ -1088,7 +1120,9 @@ class ProductResource extends Resource
         // Preserve existing image if not changed
         // This logic might need adjustment based on how FileUpload handles empty states
         // For now, we assume $data will not contain 'image' if it's not being updated.
-        return static::mutateFormDataBeforeSave($data);
+        $result = static::mutateFormDataBeforeSave($data);
+        static::clearVendorCache(); // Clear cache after processing
+        return $result;
     }
 
     /**

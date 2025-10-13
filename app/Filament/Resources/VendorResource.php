@@ -254,6 +254,14 @@ class VendorResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->query(
+                static::getEloquentQuery()->withCount([
+                    'productVendors',
+                    'expenses',
+                    'notaDinasDetails',
+                    'productPenambahans'
+                ])
+            )
             ->poll('5s')
             ->defaultPaginationPageOption(25)
             ->columns([
@@ -336,41 +344,31 @@ class VendorResource extends Resource
                 Tables\Columns\TextColumn::make('usage_status')
                     ->label('Usage Status')
                     ->badge()
-                    ->getStateUsing(function (Vendor $record): string {
-                        $productCount = $record->productVendors()->count();
-                        $expenseCount = $record->vendors()->count();
-                        $notaDinasCount = $record->notaDinasDetails()->count();
-                        
-                        if ($productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0) {
-                            return 'In Use';
-                        }
-                        return 'Available';
-                    })
                     ->color(fn (string $state): string => match ($state) {
                         'In Use' => 'warning',
                         'Available' => 'success',
                         default => 'gray',
                     })
                     ->tooltip(function (Vendor $record): string {
-                        $productCount = $record->productVendors()->count();
-                        $expenseCount = $record->vendors()->count();
-                        $notaDinasCount = $record->notaDinasDetails()->count();
+                        $details = $record->usage_details;
+                        $descriptions = [];
                         
-                        $details = [];
-                        if ($productCount > 0) {
-                            $details[] = "{$productCount} product(s)";
+                        if ($details['productCount'] > 0) {
+                            $descriptions[] = "{$details['productCount']} product(s)";
                         }
-                        if ($expenseCount > 0) {
-                            $details[] = "{$expenseCount} expense(s)";
+                        if ($details['expenseCount'] > 0) {
+                            $descriptions[] = "{$details['expenseCount']} expense(s)";
                         }
-                        if ($notaDinasCount > 0) {
-                            $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                        if ($details['notaDinasCount'] > 0) {
+                            $descriptions[] = "{$details['notaDinasCount']} nota dinas detail(s)";
+                        }
+                        if ($details['productPenambahanCount'] > 0) {
+                            $descriptions[] = "{$details['productPenambahanCount']} product addition(s)";
                         }
                         
-                        if (!empty($details)) {
-                            return 'Used in: ' . implode(', ', $details);
-                        }
-                        return 'Not used in any products, expenses, or nota dinas details';
+                        return !empty($descriptions) 
+                            ? 'Used in: ' . implode(', ', $descriptions)
+                            : 'Not used in any products, expenses, nota dinas details, or product additions';
                     })
                     ->sortable(false)
                     ->searchable(false)
@@ -417,13 +415,15 @@ class VendorResource extends Resource
                         return $query->when(
                             $data['usage'] === 'in_use',
                             fn (Builder $query): Builder => $query->whereHas('productVendors')
-                                ->orWhereHas('vendors') // expenses
-                                ->orWhereHas('notaDinasDetails'), // nota dinas details
+                                ->orWhereHas('expenses') // expenses
+                                ->orWhereHas('notaDinasDetails') // nota dinas details
+                                ->orWhereHas('productPenambahans'), // product additions
                         )->when(
                             $data['usage'] === 'available',
                             fn (Builder $query): Builder => $query->whereDoesntHave('productVendors')
-                                ->whereDoesntHave('vendors') // expenses
-                                ->whereDoesntHave('notaDinasDetails'), // nota dinas details
+                                ->whereDoesntHave('expenses') // expenses
+                                ->whereDoesntHave('notaDinasDetails') // nota dinas details
+                                ->whereDoesntHave('productPenambahans'), // product additions
                         );
                     })
                     ->indicateUsing(function (array $data): ?string {
@@ -449,10 +449,7 @@ class VendorResource extends Resource
                         ->modalIcon('heroicon-o-exclamation-triangle')
                         ->modalIconColor('danger')
                         ->visible(function (Vendor $record): bool {
-                            $productCount = $record->productVendors()->count();
-                            $expenseCount = $record->vendors()->count();
-                            $notaDinasCount = $record->notaDinasDetails()->count();
-                            return $productCount === 0 && $expenseCount === 0 && $notaDinasCount === 0;
+                            return $record->usage_status === 'Available';
                         })
                         ->before(function (?Vendor $record) {
                             if (!$record) {
@@ -495,16 +492,18 @@ class VendorResource extends Resource
                             }
 
                             // Double check for associations
-                            $productCount = $record->productVendors()->count();
-                            $expenseCount = $record->vendors()->count();
+                            $usageDetails = $record->usage_details;
                             
-                            if ($productCount > 0 || $expenseCount > 0) {
+                            if ($record->usage_status === 'In Use') {
                                 $details = [];
-                                if ($productCount > 0) {
-                                    $details[] = "{$productCount} product(s)";
+                                if ($usageDetails['productCount'] > 0) {
+                                    $details[] = "{$usageDetails['productCount']} product(s)";
                                 }
-                                if ($expenseCount > 0) {
-                                    $details[] = "{$expenseCount} expense(s)";
+                                if ($usageDetails['expenseCount'] > 0) {
+                                    $details[] = "{$usageDetails['expenseCount']} expense(s)";
+                                }
+                                if ($usageDetails['notaDinasCount'] > 0) {
+                                    $details[] = "{$usageDetails['notaDinasCount']} nota dinas detail(s)";
                                 }
                                 
                                 Notification::make()
@@ -579,25 +578,23 @@ class VendorResource extends Resource
                         ->color('gray')
                         ->tooltip('This vendor cannot be deleted because it is being used')
                         ->visible(function (Vendor $record): bool {
-                            $productCount = $record->productVendors()->count();
-                            $expenseCount = $record->vendors()->count();
-                            $notaDinasCount = $record->notaDinasDetails()->count();
-                            return $productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0;
+                            return $record->usage_status === 'In Use';
                         })
                         ->action(function (Vendor $record) {
-                            $productCount = $record->productVendors()->count();
-                            $expenseCount = $record->vendors()->count();
-                            $notaDinasCount = $record->notaDinasDetails()->count();
+                            $usageDetails = $record->usage_details;
                             
                             $details = [];
-                            if ($productCount > 0) {
-                                $details[] = "{$productCount} product(s)";
+                            if ($usageDetails['productCount'] > 0) {
+                                $details[] = "{$usageDetails['productCount']} product(s)";
                             }
-                            if ($expenseCount > 0) {
-                                $details[] = "{$expenseCount} expense(s)";
+                            if ($usageDetails['expenseCount'] > 0) {
+                                $details[] = "{$usageDetails['expenseCount']} expense(s)";
                             }
-                            if ($notaDinasCount > 0) {
-                                $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                            if ($usageDetails['notaDinasCount'] > 0) {
+                                $details[] = "{$usageDetails['notaDinasCount']} nota dinas detail(s)";
+                            }
+                            if ($usageDetails['productPenambahanCount'] > 0) {
+                                $details[] = "{$usageDetails['productPenambahanCount']} product addition(s)";
                             }
                             
                             Notification::make()
@@ -614,8 +611,9 @@ class VendorResource extends Resource
                         ->modalHeading(fn (Vendor $record) => 'Usage Details for: ' . $record->name)
                         ->modalDescription('See where this vendor is currently being used')
                         ->modalContent(function (Vendor $record) {
-                            $productCount = $record->productVendors()->count();
-                            $expenseCount = $record->vendors()->count();
+                            $usageDetails = $record->usage_details;
+                            $productCount = $usageDetails['productCount'];
+                            $expenseCount = $usageDetails['expenseCount'];
                             
                             $content = '<div class="space-y-4">';
                             
@@ -644,10 +642,30 @@ class VendorResource extends Resource
                                 $content .= '</div>';
                             }
                             
-                            if ($productCount === 0 && $expenseCount === 0) {
+                            $productPenambahanCount = $usageDetails['productPenambahanCount'];
+                            if ($productPenambahanCount > 0) {
+                                $productPenambahans = $record->productPenambahans()
+                                    ->with('product')
+                                    ->get()
+                                    ->groupBy('product.name');
+                                
+                                $content .= '<div class="p-4 bg-purple-50 border border-purple-200 rounded-lg">';
+                                $content .= '<h3 class="font-semibold text-purple-800 mb-2">Used in Product Additions (' . $productPenambahanCount . ' items)</h3>';
+                                $content .= '<ul class="list-disc list-inside text-purple-700 space-y-1">';
+                                
+                                foreach ($productPenambahans as $productName => $items) {
+                                    $totalAmount = $items->sum('harga_publish');
+                                    $content .= '<li>' . $productName . ' (Total: Rp ' . number_format($totalAmount, 0, ',', '.') . ')</li>';
+                                }
+                                
+                                $content .= '</ul></div>';
+                            }
+                            
+                            $totalUsage = $productCount + $expenseCount + $usageDetails['notaDinasCount'] + $productPenambahanCount;
+                            if ($totalUsage === 0) {
                                 $content .= '<div class="p-4 bg-green-50 border border-green-200 rounded-lg">';
                                 $content .= '<h3 class="font-semibold text-green-800 mb-2">No Usage Found</h3>';
-                                $content .= '<p class="text-green-700">This vendor is not currently used in any products or expenses and can be safely deleted.</p>';
+                                $content .= '<p class="text-green-700">This vendor is not currently used in any products, expenses, nota dinas, or product additions and can be safely deleted.</p>';
                                 $content .= '</div>';
                             }
                             
@@ -731,9 +749,9 @@ class VendorResource extends Resource
                         ->color('warning')
                         ->modalHeading(fn (Vendor $record) => 'Expenses for: ' . $record->name)
                         ->modalDescription('Detailed list of all expenses related to this vendor')
-                        ->visible(fn (Vendor $record) => $record->vendors()->count() > 0)
+                        ->visible(fn (Vendor $record) => $record->usage_details['expenseCount'] > 0)
                         ->modalContent(function (Vendor $record) {
-                            $expenses = $record->vendors()
+                            $expenses = $record->expenses()
                                 ->orderBy('created_at', 'desc')
                                 ->get();
                             
@@ -908,20 +926,20 @@ class VendorResource extends Resource
                             foreach ($records as $vendor) {
                                 try {
                                     // Check if vendor can be deleted
-                                    $productCount = $vendor->productVendors()->count();
-                                    $expenseCount = $vendor->vendors()->count();
-                                    $notaDinasCount = $vendor->notaDinasDetails()->count();
-                                    
-                                    if ($productCount > 0 || $expenseCount > 0 || $notaDinasCount > 0) {
+                                    if ($vendor->usage_status === 'In Use') {
+                                        $usageDetails = $vendor->usage_details;
                                         $details = [];
-                                        if ($productCount > 0) {
-                                            $details[] = "{$productCount} product(s)";
+                                        if ($usageDetails['productCount'] > 0) {
+                                            $details[] = "{$usageDetails['productCount']} product(s)";
                                         }
-                                        if ($expenseCount > 0) {
-                                            $details[] = "{$expenseCount} expense(s)";
+                                        if ($usageDetails['expenseCount'] > 0) {
+                                            $details[] = "{$usageDetails['expenseCount']} expense(s)";
                                         }
-                                        if ($notaDinasCount > 0) {
-                                            $details[] = "{$notaDinasCount} nota dinas detail(s)";
+                                        if ($usageDetails['notaDinasCount'] > 0) {
+                                            $details[] = "{$usageDetails['notaDinasCount']} nota dinas detail(s)";
+                                        }
+                                        if ($usageDetails['productPenambahanCount'] > 0) {
+                                            $details[] = "{$usageDetails['productPenambahanCount']} product addition(s)";
                                         }
                                         $protectedVendors[] = "• {$vendor->name}: " . implode(', ', $details);
                                         continue;
@@ -1129,16 +1147,30 @@ class VendorResource extends Resource
                                                 Infolists\Components\TextEntry::make('products_count')
                                                     ->label('Used in Products')
                                                     ->state(function (Vendor $record): int {
-                                                        return $record->productVendors()->count();
+                                                        $basicFacilitiesCount = $record->productVendors()->count();
+                                                        $additionsCount = $record->productPenambahans()->count();
+                                                        return $basicFacilitiesCount + $additionsCount;
                                                     })
                                                     ->badge()
                                                     ->color(fn (int $state): string => $state > 0 ? 'warning' : 'success')
-                                                    ->suffix(' items'),
+                                                    ->suffix(' items')
+                                                    ->tooltip(function (Vendor $record): string {
+                                                        $basicCount = $record->productVendors()->count();
+                                                        $additionsCount = $record->productPenambahans()->count();
+                                                        $details = [];
+                                                        if ($basicCount > 0) {
+                                                            $details[] = "{$basicCount} in Basic Facilities";
+                                                        }
+                                                        if ($additionsCount > 0) {
+                                                            $details[] = "{$additionsCount} in Additions";
+                                                        }
+                                                        return !empty($details) ? implode(', ', $details) : 'No usage';
+                                                    }),
 
                                                 Infolists\Components\TextEntry::make('expenses_count')
                                                     ->label('Related Expenses')
                                                     ->state(function (Vendor $record): int {
-                                                        return $record->vendors()->count();
+                                                        return $record->usage_details['expenseCount'];
                                                     })
                                                     ->badge()
                                                     ->color(fn (int $state): string => $state > 0 ? 'info' : 'gray')
@@ -1147,23 +1179,11 @@ class VendorResource extends Resource
                                                 Infolists\Components\TextEntry::make('deletion_status')
                                                     ->label('Deletion Status')
                                                     ->state(function (Vendor $record): string {
-                                                        $productCount = $record->productVendors()->count();
-                                                        $expenseCount = $record->vendors()->count();
-                                                        
-                                                        if ($productCount > 0 || $expenseCount > 0) {
-                                                            return 'Protected';
-                                                        }
-                                                        return 'Can be deleted';
+                                                        return $record->usage_status === 'In Use' ? 'Protected' : 'Can be deleted';
                                                     })
                                                     ->badge()
                                                     ->color(function (Vendor $record): string {
-                                                        $productCount = $record->productVendors()->count();
-                                                        $expenseCount = $record->vendors()->count();
-                                                        
-                                                        if ($productCount > 0 || $expenseCount > 0) {
-                                                            return 'danger';
-                                                        }
-                                                        return 'success';
+                                                        return $record->usage_status === 'In Use' ? 'danger' : 'success';
                                                     }),
                                             ]),
                                     ]),
@@ -1173,11 +1193,14 @@ class VendorResource extends Resource
                                         Infolists\Components\TextEntry::make('usage_details')
                                             ->label('Detailed Usage Information')
                                             ->state(function (Vendor $record): string {
-                                                $productCount = $record->productVendors()->count();
-                                                $expenseCount = $record->vendors()->count();
+                                                $usageDetails = $record->usage_details;
+                                                $productCount = $usageDetails['productCount'];
+                                                $expenseCount = $usageDetails['expenseCount'];
+                                                $productPenambahanCount = $usageDetails['productPenambahanCount'];
                                                 
                                                 $details = [];
                                                 
+                                                // Basic Facilities Products
                                                 if ($productCount > 0) {
                                                     $productNames = $record->productVendors()
                                                         ->with('product')
@@ -1186,20 +1209,33 @@ class VendorResource extends Resource
                                                         ->unique()
                                                         ->take(5);
                                                     
-                                                    $details[] = "Products ({$productCount} total): " . $productNames->implode(', ') . 
+                                                    $details[] = "**Product Basic Facilities** ({$productCount} total): " . $productNames->implode(', ') . 
                                                         ($productCount > 5 ? ' and ' . ($productCount - 5) . ' more...' : '');
                                                 }
                                                 
+                                                // Product Additions
+                                                if ($productPenambahanCount > 0) {
+                                                    $additionProducts = $record->productPenambahans()
+                                                        ->with('product')
+                                                        ->get()
+                                                        ->pluck('product.name')
+                                                        ->unique()
+                                                        ->take(5);
+                                                    
+                                                    $details[] = "**Product Additions** ({$productPenambahanCount} total): " . $additionProducts->implode(', ') . 
+                                                        ($productPenambahanCount > 5 ? ' and ' . ($productPenambahanCount - 5) . ' more...' : '');
+                                                }
+                                                
                                                 if ($expenseCount > 0) {
-                                                    $details[] = "Expenses: {$expenseCount} transaction(s)";
+                                                    $details[] = "**Expenses**: {$expenseCount} transaction(s)";
                                                 }
                                                 
                                                 if (empty($details)) {
-                                                    return 'This vendor is not currently used in any products or expenses and can be safely deleted.';
+                                                    return 'This vendor is not currently used in any products, expenses, or product additions and can be safely deleted.';
                                                 }
                                                 
                                                 return implode("\n\n", $details) . 
-                                                    "\n\nNote: This vendor cannot be deleted while these associations exist.";
+                                                    "\n\n**Note**: This vendor cannot be deleted while these associations exist.";
                                             })
                                             ->markdown()
                                             ->columnSpanFull(),
