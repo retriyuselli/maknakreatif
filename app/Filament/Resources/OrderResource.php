@@ -699,6 +699,8 @@ class OrderResource extends Resource
                                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                                         ->maxSize(5120) // 5MB
                                                         ->required()
+                                                        ->downloadable()
+                                                        ->openable()
                                                         ->columnSpan(1),
                                                 ]),
                                     ])
