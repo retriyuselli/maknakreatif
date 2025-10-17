@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('bank_statements', function (Blueprint $table) {
             // Add separate file path for reconciliation Excel file
-            $table->string('reconciliation_file')->nullable()->after('file_path');
+            // $table->string('reconciliation_file')->nullable()->after('file_path');
             
             // Add separate original filename for reconciliation file
             $table->string('reconciliation_original_filename')->nullable()->after('original_filename');
@@ -21,12 +21,12 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migr
      */
     public function down(): void
     {
         Schema::table('bank_statements', function (Blueprint $table) {
-            $table->dropColumn(['reconciliation_file', 'reconciliation_original_filename']);
+            $table->dropColumn(['reconciliation_original_filename']);
         });
     }
 };
