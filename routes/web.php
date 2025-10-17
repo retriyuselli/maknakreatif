@@ -21,6 +21,11 @@ use App\Http\Controllers\Front\AuthController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\LeaveRequestController;
+use App\Http\Controllers\BankReconciliationTemplateController;
+
+// Bank Reconciliation Template Route
+Route::get('/bank-reconciliation/template', [BankReconciliationTemplateController::class, 'downloadTemplate'])
+    ->name('bank-reconciliation.template');
 
 // Route::get('/', function () {
 //     return view('welcome');
@@ -419,6 +424,20 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->back()->with('error', 'Failed to generate targets: ' . $e->getMessage());
         }
     })->name('admin.targets.generate-from-orders');
+});
+
+// Reconciliation API Routes
+Route::middleware(['auth'])->prefix('admin/reconciliation')->group(function () {
+    Route::post('/mark-matched', [App\Http\Controllers\ReconciliationController::class, 'markMatched']);
+    Route::post('/unmark-matched', [App\Http\Controllers\ReconciliationController::class, 'unmarkMatched']);
+    Route::post('/auto-match', [App\Http\Controllers\ReconciliationController::class, 'autoMatch']);
+    Route::get('/export', [App\Http\Controllers\ReconciliationController::class, 'export']);
+});
+
+// Bank Reconciliation Page Route (Alternative to Filament)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/bank-statements/{bankStatement}/reconciliation-alt', [App\Http\Controllers\BankReconciliationPageController::class, 'show'])
+        ->name('bank-statements.reconciliation-alt');
 });
 
 // Route untuk PDF Nota Dinas Approval

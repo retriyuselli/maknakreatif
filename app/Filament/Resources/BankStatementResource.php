@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BankStatementResource\Pages;
+use App\Filament\Resources\BankStatementResource\RelationManagers;
 use App\Filament\Resources\BankStatementResource\Widgets\BankStatementOverview;
 use App\Models\BankStatement; 
 use Filament\Forms;
@@ -14,7 +15,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
 use Filament\Support\RawJs; 
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str; 
 
 
 class BankStatementResource extends Resource
@@ -218,7 +220,8 @@ class BankStatementResource extends Resource
                         
                         Forms\Components\Placeholder::make('file_info')
                             ->label('Informasi File')
-                            ->content(function ($record, callable $get) {
+                            ->content(function (callable $get, $livewire) {
+                                $record = $livewire->record ?? null;
                                 if ($record && $record->file_path) {
                                     $filePath = storage_path('app/public/' . $record->file_path);
                                     if (file_exists($filePath)) {
@@ -342,7 +345,73 @@ class BankStatementResource extends Resource
                                     ]),
                             ]),
                     ]),
+
                 Forms\Components\Hidden::make('status')->default('pending'),
+
+
+
+                Forms\Components\Section::make('Upload File Excel Rekonsiliasi')
+                    ->description('Upload file Excel untuk rekonsiliasi bank (opsional)')
+                    ->schema([
+                        Forms\Components\FileUpload::make('reconciliation_file')
+                            ->label('File Excel Rekonsiliasi')
+                            ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
+                            ->disk('public')
+                            ->directory('bank-reconciliations')
+                            ->preserveFilenames()
+                            ->maxSize(10240) // 10MB
+                            ->helperText('Upload file Excel dengan format: Tanggal, Keterangan, Debit, Credit')
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    // Set reconciliation original filename when file is uploaded
+                                    $set('reconciliation_original_filename', basename($state));
+                                }
+                            }),
+                    ])->columns(1)
+                    ->collapsible()
+                    ->collapsed(),
+
+                Forms\Components\Section::make('Status Rekonsiliasi')
+                    ->schema([
+                        Forms\Components\Select::make('reconciliation_status')
+                            ->label('Status Rekonsiliasi')
+                            ->options(\App\Models\BankStatement::getReconciliationStatusOptions())
+                            ->default('uploaded')
+                            ->disabled(fn (string $operation): bool => $operation === 'create'),
+
+                        Forms\Components\TextInput::make('total_records')
+                            ->label('Total Records')
+                            ->numeric()
+                            ->disabled()
+                            ->default(0),
+
+                        Forms\Components\TextInput::make('total_debit_reconciliation')
+                            ->label('Total Debit Rekonsiliasi')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->disabled()
+                            ->default(0),
+
+                        Forms\Components\TextInput::make('total_credit_reconciliation')
+                            ->label('Total Credit Rekonsiliasi')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->disabled()
+                            ->default(0),
+                    ])->columns(2)
+                    ->collapsible()
+                    ->collapsed(),
+
+                Forms\Components\Hidden::make('uploaded_by')
+                    ->default(fn() => Auth::id()),
+
+                Forms\Components\Hidden::make('original_filename'),
+                Forms\Components\Hidden::make('reconciliation_original_filename'),
             ]);
     }
 
@@ -431,6 +500,51 @@ class BankStatementResource extends Resource
                         default => 'secondary',
                     })
                     ->formatStateUsing(fn (string $state) => \App\Models\BankStatement::getStatusOptions()[$state] ?? $state),
+
+                Tables\Columns\TextColumn::make('reconciliation_status')
+                    ->label('Status Rekonsiliasi')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'uploaded' => 'warning',
+                        'processing' => 'info',
+                        'completed' => 'success',
+                        'failed' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state) => \App\Models\BankStatement::getReconciliationStatusOptions()[$state] ?? $state)
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('total_records')
+                    ->label('Total Records')
+                    ->numeric()
+                    ->sortable()
+                    ->alignEnd()
+                    ->suffix(' records')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('reconciliation_original_filename')
+                    ->label('File Rekonsiliasi')
+                    ->searchable()
+                    ->formatStateUsing(function ($state, $record) {
+                        if (!$state || !$record->reconciliation_file) {
+                            return new \Illuminate\Support\HtmlString('<span class="text-gray-400">Tidak ada</span>');
+                        }
+                        
+                        $fileName = $state;
+                        $url = Storage::url($record->reconciliation_file);
+                        
+                        return new \Illuminate\Support\HtmlString(
+                            '<div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                </svg>
+                                <a href="' . $url . '" target="_blank" class="text-blue-600 hover:text-blue-800 truncate max-w-32" title="' . htmlspecialchars($fileName) . '">
+                                    ' . Str::limit(htmlspecialchars($fileName), 20) . '
+                                </a>
+                            </div>'
+                        );
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('payment_method_id')
@@ -496,6 +610,17 @@ class BankStatementResource extends Resource
                         ->label('Edit')
                         ->color('warning')
                         ->tooltip('Edit rekening koran'),
+                    Tables\Actions\Action::make('reconcile_comparison')
+                        ->label('Rekonsiliasi Perbandingan')
+                        ->icon('heroicon-o-scale')
+                        ->color('primary')
+                        ->visible(fn (BankStatement $record): bool => 
+                            $record->payment_method_id && 
+                            $record->reconciliationItems()->count() > 0
+                        )
+                        ->tooltip('Bandingkan transaksi aplikasi dengan mutasi bank')
+                        ->url(fn (BankStatement $record): string => route('bank-statements.reconciliation-alt', $record))
+                        ->openUrlInNewTab(false),
                     Tables\Actions\Action::make('download')
                         ->label('Unduh File')
                         ->icon('heroicon-o-arrow-down-tray')
@@ -550,7 +675,7 @@ class BankStatementResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // TransactionRelationManager::class,
+            RelationManagers\BankReconciliationItemsRelationManager::class,
         ];
     }
 
@@ -559,7 +684,9 @@ class BankStatementResource extends Resource
         return [
             'index' => Pages\ListBankStatements::route('/'),
             'create' => Pages\CreateBankStatement::route('/create'),
+            'view' => Pages\ViewBankStatement::route('/{record}'),
             'edit' => Pages\EditBankStatement::route('/{record}/edit'),
+            'reconciliation' => Pages\ReconciliationComparison::route('/{record}/reconciliation'),
         ];
     }
 

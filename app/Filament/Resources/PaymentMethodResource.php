@@ -17,6 +17,8 @@ use Filament\Tables\Filters\Filter;
 use Illuminate\Support\Carbon;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class PaymentMethodResource extends Resource
 {
@@ -192,6 +194,134 @@ class PaymentMethodResource extends Resource
                     ->tooltip('Lihat detail lengkap rekening dengan tab Uang Masuk, Uang Keluar, dan Laporan'),
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make(),
+                    Tables\Actions\Action::make('rekonsiliasi_bank')
+                        ->label('Rekonsiliasi Bank')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('warning')
+                        ->visible(fn ($record) => !$record->is_cash) // Hanya untuk rekening bank
+                        ->form([
+                            Forms\Components\Section::make('Upload Mutasi Bank')
+                                ->description('Upload file Excel (.xlsx) atau CSV dari mutasi bank untuk melakukan rekonsiliasi otomatis')
+                                ->schema([
+                                    Forms\Components\FileUpload::make('mutasi_file')
+                                        ->label('File Mutasi Bank')
+                                        ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/vnd.ms-excel'])
+                                        ->helperText('Upload file Excel (.xlsx/.xls) atau CSV dari bank. 
+                                                     ✅ Format yang didukung:
+                                                     • Bank Mandiri: Balance History & Transaction History
+                                                     • BCA, BNI, BRI: Format standar
+                                                     • Format generic dengan kolom: Tanggal, Keterangan, Debit/Kredit, Saldo')
+                                        ->required()
+                                        ->disk('public')
+                                        ->directory('bank-statements')
+                                        ->preserveFilenames()
+                                        ->maxSize(10240), // 10MB
+                                    
+                                    Forms\Components\Grid::make(2)->schema([
+                                        Forms\Components\DatePicker::make('periode_dari')
+                                            ->label('Periode Dari')
+                                            ->required()
+                                            ->native(false)
+                                            ->displayFormat('d/m/Y')
+                                            ->default(now()->startOfMonth()),
+                                        Forms\Components\DatePicker::make('periode_sampai')
+                                            ->label('Periode Sampai')
+                                            ->required()
+                                            ->native(false)
+                                            ->displayFormat('d/m/Y')
+                                            ->default(now()->endOfMonth()),
+                                    ]),
+                                    
+                                    Forms\Components\Textarea::make('catatan')
+                                        ->label('Catatan Rekonsiliasi')
+                                        ->placeholder('Tambahkan catatan atau informasi khusus untuk rekonsiliasi ini...')
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+                                ])
+                        ])
+                        ->action(function ($record, $data) {
+                            try {
+                                // Create Bank Statement record
+                                $bankStatement = \App\Models\BankStatement::create([
+                                    'payment_method_id' => $record->id,
+                                    'period_start' => $data['periode_dari'],
+                                    'period_end' => $data['periode_sampai'],
+                                    'source_type' => 'excel',
+                                    'file_path' => $data['mutasi_file'],
+                                    'status' => 'pending',
+                                    'uploaded_at' => now(),
+                                    // Add default values for required fields
+                                    'opening_balance' => 0,
+                                    'closing_balance' => 0,
+                                    'no_of_debit' => 0,
+                                    'tot_debit' => 0,
+                                    'no_of_credit' => 0,
+                                    'tot_credit' => 0,
+                                    'branch' => null,
+                                ]);
+
+                                // Import Excel file
+                                $import = new \App\Imports\BankStatementImport($bankStatement);
+                                \Maatwebsite\Excel\Facades\Excel::import($import, storage_path('app/public/' . $data['mutasi_file']));
+                                
+                                $stats = $import->getImportStats();
+                                
+                                // Determine final status
+                                $hasErrors = !empty($stats['errors']);
+                                $finalStatus = $hasErrors ? 'failed' : 'parsed';
+                                
+                                // Update bank statement with calculated statistics
+                                if ($stats['imported'] > 0 && !$hasErrors) {
+                                    // Calculate transaction amounts from balance history (for Bank Mandiri format)
+                                    $import->calculateTransactionAmounts();
+                                    
+                                    // Update bank statement statistics
+                                    $import->updateBankStatementStatistics();
+                                }
+                                
+                                // Update bank statement status
+                                $bankStatement->update([
+                                    'status' => $finalStatus,
+                                ]);
+
+                                if ($hasErrors) {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Import Selesai dengan Error')
+                                        ->body("Berhasil import {$stats['imported']} transaksi. " . 
+                                              "Namun ada {$stats['skipped']} baris yang error: " . 
+                                              implode(', ', array_slice($stats['errors'], 0, 3)) . 
+                                              (count($stats['errors']) > 3 ? '...' : ''))
+                                        ->warning()
+                                        ->send();
+                                } else {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Import Bank Statement Berhasil')
+                                        ->body("Berhasil import {$stats['imported']} transaksi. " . 
+                                              ($stats['skipped'] ? "Ada {$stats['skipped']} transaksi yang dilewati." : ""))
+                                        ->success()
+                                        ->send();
+                                }
+
+                            } catch (\Exception $e) {
+                                // Log the full error for debugging
+                                Log::error('Bank Reconciliation Import Error', [
+                                    'error' => $e->getMessage(),
+                                    'trace' => $e->getTraceAsString(),
+                                    'payment_method_id' => $record->id,
+                                    'file' => $data['mutasi_file'] ?? 'unknown'
+                                ]);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Error Rekonsiliasi Bank')
+                                    ->body('Gagal memproses file: ' . $e->getMessage() . 
+                                          '. Pastikan format file Excel sesuai dengan template yang diharapkan.')
+                                    ->danger()
+                                    ->send();
+                            }
+                        })
+                        ->modalHeading('Rekonsiliasi Bank')
+                        ->modalDescription('Upload file mutasi bank untuk melakukan rekonsiliasi otomatis dengan transaksi sistem')
+                        ->modalWidth('2xl'),
                     Tables\Actions\Action::make('export_transaksi')
                         ->label('Export Transaksi')
                         ->icon('heroicon-o-document-arrow-down')
