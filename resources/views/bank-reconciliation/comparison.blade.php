@@ -85,8 +85,8 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left font-medium text-gray-700">Tanggal</th>
                                     <th class="px-6 py-3 text-left font-medium text-gray-700">Keterangan</th>
-                                    <th class="px-6 py-3 text-right font-medium text-gray-700">Debit</th>
-                                    <th class="px-6 py-3 text-right font-medium text-gray-700">Credit</th>
+                                    <th class="px-6 py-3 text-center font-medium text-gray-700">Jenis</th>
+                                    <th class="px-6 py-3 text-right font-medium text-gray-700">Jumlah</th>
                                     <th class="px-6 py-3 text-right font-medium text-gray-700">Saldo</th>
                                 </tr>
                             </thead>
@@ -105,20 +105,28 @@
                                                 {{ $item->description }}
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 text-right text-gray-900">
-                                            @if($item->debit > 0)
-                                                <span class="text-red-600 font-medium">
-                                                    Rp {{ number_format($item->debit, 0, ',', '.') }}
+                                        <td class="px-6 py-4 text-center">
+                                            @php
+                                                $isDebit = $item->debit > 0;
+                                                $amount = $isDebit ? $item->debit : $item->credit;
+                                            @endphp
+                                            @if($amount > 0)
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $isDebit ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' }}">
+                                                    {{ $isDebit ? '↗️ Keluar' : '↙️ Masuk' }}
                                                 </span>
                                             @else
                                                 <span class="text-gray-400">-</span>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 text-right text-gray-900">
-                                            @if($item->credit > 0)
-                                                <span class="text-green-600 font-medium">
-                                                    Rp {{ number_format($item->credit, 0, ',', '.') }}
+                                            @if($amount > 0)
+                                                <span class="font-medium {{ $isDebit ? 'text-red-600' : 'text-green-600' }}" 
+                                                      title="Bank: {{ $isDebit ? 'Debit' : 'Credit' }} Rp {{ number_format($amount, 0, ',', '.') }}">
+                                                    {{ $isDebit ? '- Rp' : '+ Rp' }} {{ number_format($amount, 0, ',', '.') }}
                                                 </span>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    Bank: {{ $isDebit ? 'Debit' : 'Credit' }}
+                                                </div>
                                             @else
                                                 <span class="text-gray-400">-</span>
                                             @endif

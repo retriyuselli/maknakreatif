@@ -430,6 +430,8 @@ class BankStatementResource extends Resource
                         }
                         return '-';
                     }),
+                Tables\Columns\TextColumn::make('paymentMethod.name')
+                    ->label('Pemilik'),
                 Tables\Columns\TextColumn::make('period_start')
                     ->label('Tanggal Mulai')
                     ->date('d M Y')

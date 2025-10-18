@@ -10,6 +10,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 class BankReconciliationItemsRelationManager extends RelationManager
@@ -46,17 +47,50 @@ class BankReconciliationItemsRelationManager extends RelationManager
                         return preg_replace('/\s+/', ' ', trim($state));
                     }),
                     
-                Forms\Components\TextInput::make('debit')
-                    ->label('Debit')
-                    ->numeric()
-                    ->prefix('Rp')
-                    ->default(0),
+                Forms\Components\Select::make('transaction_direction')
+                    ->label('Jenis Transaksi')
+                    ->options([
+                        'masuk' => 'Uang Masuk (Penerimaan)',
+                        'keluar' => 'Uang Keluar (Pengeluaran)',
+                    ])
+                    ->required()
+                    ->helperText('Pilih jenis transaksi: Masuk untuk penerimaan, Keluar untuk pengeluaran')
+                    ->afterStateHydrated(function (Forms\Components\Select $component, ?Model $record) {
+                        if ($record && ($record->debit > 0 || $record->credit > 0)) {
+                            $component->state($record->debit > 0 ? 'keluar' : 'masuk');
+                        }
+                    }),
                     
-                Forms\Components\TextInput::make('credit')
-                    ->label('Credit')
+                Forms\Components\TextInput::make('amount')
+                    ->label('Jumlah')
                     ->numeric()
                     ->prefix('Rp')
-                    ->default(0),
+                    ->step(0.01)
+                    ->minValue(0)
+                    ->required()
+                    ->helperText('Masukkan nominal transaksi')
+                    ->afterStateHydrated(function (Forms\Components\TextInput $component, ?Model $record) {
+                        if ($record) {
+                            $amount = $record->debit > 0 ? $record->debit : $record->credit;
+                            $component->state($amount);
+                        }
+                    })
+                    ->dehydrated(false), // Don't save this field directly
+                    
+                // Hidden fields for actual debit/credit values
+                Forms\Components\Hidden::make('debit')
+                    ->dehydrateStateUsing(function ($state, callable $get) {
+                        $direction = $get('transaction_direction');
+                        $amount = $get('amount');
+                        return ($direction === 'keluar') ? floatval($amount) : 0;
+                    }),
+                    
+                Forms\Components\Hidden::make('credit')
+                    ->dehydrateStateUsing(function ($state, callable $get) {
+                        $direction = $get('transaction_direction');
+                        $amount = $get('amount');
+                        return ($direction === 'masuk') ? floatval($amount) : 0;
+                    }),
             ]);
     }
 
@@ -84,19 +118,44 @@ class BankReconciliationItemsRelationManager extends RelationManager
                         return preg_replace('/\s+/', ' ', trim($state));
                     }),
                     
+                Tables\Columns\TextColumn::make('transaction_type')
+                    ->label('Jenis')
+                    ->badge()
+                    ->formatStateUsing(function ($record): string {
+                        return $record->debit > 0 ? 'Keluar' : 'Masuk';
+                    })
+                    ->color(fn ($record): string => $record->debit > 0 ? 'danger' : 'success')
+                    ->sortable(),
+                    
+                Tables\Columns\TextColumn::make('amount_display')
+                    ->label('Jumlah')
+                    ->alignEnd()
+                    ->formatStateUsing(function ($record): string {
+                        $amount = $record->debit > 0 ? $record->debit : $record->credit;
+                        $prefix = $record->debit > 0 ? '- Rp' : '+ Rp';
+                        return $prefix . ' ' . number_format($amount, 0, ',', '.');
+                    })
+                    ->color(fn ($record): string => $record->debit > 0 ? 'danger' : 'success')
+                    ->sortable(),
+                    
+                // Optional: Show original debit/credit for technical users
                 Tables\Columns\TextColumn::make('debit')
-                    ->label('Debit')
+                    ->label('Debit (Bank)')
                     ->money('IDR')
                     ->alignEnd()
                     ->color('danger')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->tooltip('Format standar bank: Debit = Uang Keluar'),
                     
                 Tables\Columns\TextColumn::make('credit')
-                    ->label('Credit')
+                    ->label('Credit (Bank)')
                     ->money('IDR')
                     ->alignEnd()
                     ->color('success')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->tooltip('Format standar bank: Credit = Uang Masuk'),
             ])
             ->filters([
                 Tables\Filters\Filter::make('date_range')
