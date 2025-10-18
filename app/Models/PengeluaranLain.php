@@ -27,6 +27,11 @@ class PengeluaranLain extends Model
         'account_holder',
         'bank_account',
         'tanggal_transfer',
+        // Reconciliation fields
+        'reconciliation_status',
+        'matched_bank_item_id',
+        'match_confidence',
+        'reconciliation_notes',
     ];
 
     protected $casts = [

@@ -23,13 +23,26 @@ class BankReconciliationPageController extends Controller
         // Load relationships
         $bankStatement->load('paymentMethod', 'reconciliationItems');
 
-        // Get reconciliation results
-        $reconciliationService = new ReconciliationService();
+        // Initialize reconciliation service
+        $reconciliationService = app(ReconciliationService::class);
+        
+        // Always run fresh reconciliation for the specific date range and save to database
         $reconciliationResults = $reconciliationService->reconcile(
+            $bankStatement->payment_method_id,
+            $bankStatement->period_start->format('Y-m-d'),
+            $bankStatement->period_end->format('Y-m-d'),
+            true  // Save matches to database
+        );
+        
+        // Then get stored matches to ensure consistency with database
+        $storedResults = $reconciliationService->getStoredMatches(
             $bankStatement->payment_method_id,
             $bankStatement->period_start->format('Y-m-d'),
             $bankStatement->period_end->format('Y-m-d')
         );
+        
+        // Use stored results for display to ensure unmark functionality works
+        $reconciliationResults['matched'] = $storedResults['matched'];
 
         // DEBUG: Log the results for analysis
         foreach ($reconciliationResults['matched'] as $match) {

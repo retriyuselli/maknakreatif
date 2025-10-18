@@ -18,6 +18,10 @@ class DataPembayaran extends Model
         'tgl_bayar',
         'keterangan',
         'kategori_transaksi',
+        'reconciliation_status',
+        'matched_bank_item_id',
+        'match_confidence',
+        'reconciliation_notes',
     ];
 
     protected $casts = [

@@ -29,6 +29,12 @@ class Expense extends Model
         'account_holder',
         'bank_name',
         'bank_account',
+        
+        // Reconciliation fields
+        'reconciliation_status',
+        'matched_bank_item_id',
+        'match_confidence',
+        'reconciliation_notes',
     ];
 
     protected $casts = [

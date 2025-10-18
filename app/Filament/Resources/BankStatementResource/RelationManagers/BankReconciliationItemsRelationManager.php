@@ -118,26 +118,6 @@ class BankReconciliationItemsRelationManager extends RelationManager
                         return preg_replace('/\s+/', ' ', trim($state));
                     }),
                     
-                Tables\Columns\TextColumn::make('transaction_type')
-                    ->label('Jenis')
-                    ->badge()
-                    ->formatStateUsing(function ($record): string {
-                        return $record->debit > 0 ? 'Keluar' : 'Masuk';
-                    })
-                    ->color(fn ($record): string => $record->debit > 0 ? 'danger' : 'success')
-                    ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('amount_display')
-                    ->label('Jumlah')
-                    ->alignEnd()
-                    ->formatStateUsing(function ($record): string {
-                        $amount = $record->debit > 0 ? $record->debit : $record->credit;
-                        $prefix = $record->debit > 0 ? '- Rp' : '+ Rp';
-                        return $prefix . ' ' . number_format($amount, 0, ',', '.');
-                    })
-                    ->color(fn ($record): string => $record->debit > 0 ? 'danger' : 'success')
-                    ->sortable(),
-                    
                 // Optional: Show original debit/credit for technical users
                 Tables\Columns\TextColumn::make('debit')
                     ->label('Debit (Bank)')
@@ -145,7 +125,7 @@ class BankReconciliationItemsRelationManager extends RelationManager
                     ->alignEnd()
                     ->color('danger')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
+                    // ->toggleable(isToggledHiddenByDefault: true)
                     ->tooltip('Format standar bank: Debit = Uang Keluar'),
                     
                 Tables\Columns\TextColumn::make('credit')
@@ -154,7 +134,7 @@ class BankReconciliationItemsRelationManager extends RelationManager
                     ->alignEnd()
                     ->color('success')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
+                    // ->toggleable(isToggledHiddenByDefault: true)
                     ->tooltip('Format standar bank: Credit = Uang Masuk'),
             ])
             ->filters([

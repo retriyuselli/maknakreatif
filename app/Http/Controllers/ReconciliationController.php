@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Services\ReconciliationService;
 use App\Models\UnifiedTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ReconciliationController extends Controller
 {
@@ -169,18 +171,35 @@ class ReconciliationController extends Controller
         try {
             // Reset reconciliation status in source table
             $table = $request->source_table;
-            DB::table($table)
+            
+            // Check if the table has reconciliation fields
+            if (!Schema::hasColumn($table, 'reconciliation_status')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Table {$table} does not have reconciliation_status field"
+                ], 400);
+            }
+
+            // Reset the source transaction
+            $updated = DB::table($table)
                 ->where('id', $request->source_id)
                 ->update([
-                    'reconciliation_status' => 'uploaded',
+                    'reconciliation_status' => 'unmatched',
                     'matched_bank_item_id' => null,
                     'match_confidence' => null,
+                    'reconciliation_notes' => 'Manually unmarked at ' . now()->format('Y-m-d H:i:s'),
                     'updated_at' => now()
                 ]);
 
-            // Reset bank item as well if needed
-            \App\Models\BankReconciliationItem::where('id', $request->bank_item_id)
-                ->update(['is_matched' => false]);
+            if ($updated === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction not found or already unmatched'
+                ], 404);
+            }
+
+            // Note: bank_reconciliation_items table doesn't need to be updated
+            // as it doesn't track match status - only source tables do
 
             return response()->json([
                 'success' => true,
@@ -188,6 +207,12 @@ class ReconciliationController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Unmark failed: ' . $e->getMessage(), [
+                'source_id' => $request->source_id,
+                'source_table' => $request->source_table,
+                'bank_item_id' => $request->bank_item_id
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal membatalkan match: ' . $e->getMessage()

@@ -426,6 +426,28 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
+                                @if($reconciliationResults['unmatched_app'])
+                                    <tfoot class="bg-gray-50 border-t border-gray-200">
+                                        <tr>
+                                            <td class="px-6 py-3 text-left font-semibold text-gray-900" colspan="2">
+                                                Total
+                                            </td>
+                                            <td class="px-6 py-3 text-right font-semibold text-gray-900">
+                                                @php
+                                                    $totalUnmatchedApp = 0;
+                                                    foreach($reconciliationResults['unmatched_app'] as $transaction) {
+                                                        $amount = $transaction->debit_amount ?: $transaction->credit_amount;
+                                                        $totalUnmatchedApp += $amount;
+                                                    }
+                                                @endphp
+                                                <span class="text-orange-600">
+                                                    Rp {{ number_format($totalUnmatchedApp, 0, ',', '.') }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-3" colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                @endif
                             </table>
                         </div>
                     </div>
@@ -485,6 +507,28 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
+                                @if($reconciliationResults['unmatched_bank'])
+                                    <tfoot class="bg-gray-50 border-t border-gray-200">
+                                        <tr>
+                                            <td class="px-6 py-3 text-left font-semibold text-gray-900" colspan="2">
+                                                Total
+                                            </td>
+                                            <td class="px-6 py-3 text-right font-semibold text-gray-900">
+                                                @php
+                                                    $totalUnmatchedBank = 0;
+                                                    foreach($reconciliationResults['unmatched_bank'] as $item) {
+                                                        $amount = $item->debit ?: $item->credit;
+                                                        $totalUnmatchedBank += $amount;
+                                                    }
+                                                @endphp
+                                                <span class="text-red-600">
+                                                    Rp {{ number_format($totalUnmatchedBank, 0, ',', '.') }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-3"></td>
+                                        </tr>
+                                    </tfoot>
+                                @endif
                             </table>
                         </div>
                     </div>
@@ -552,14 +596,23 @@
                 bank_item_id: bankItemId
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
+                alert('Match berhasil dibatalkan!');
                 location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
             console.error('Error:', error);
+            alert('Terjadi error: ' + error.message);
         });
     }
 
