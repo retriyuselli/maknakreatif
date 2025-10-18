@@ -225,19 +225,27 @@
                                                 </div>
                                                 <div class="text-xs text-gray-500 mt-1">
                                                     {{ $appTransaction->source_table }}
-                                                    @if($appTransaction->source_table === 'expenses')
-                                                        @php
+                                                    @php
+                                                        $prospectName = null;
+                                                        
+                                                        if ($appTransaction->source_table === 'expenses') {
                                                             // Get expense to find related order/prospect
                                                             $expense = \App\Models\Expense::find($appTransaction->source_id);
-                                                            $prospectName = null;
                                                             if ($expense && $expense->order && $expense->order->prospect) {
                                                                 $prospect = $expense->order->prospect;
                                                                 $prospectName = $prospect->name_event ?: ($prospect->name_cpp ?: $prospect->name_cpw);
                                                             }
-                                                        @endphp
-                                                        @if($prospectName)
-                                                            <span class="text-blue-600"> • {{ $prospectName }}</span>
-                                                        @endif
+                                                        } elseif ($appTransaction->source_table === 'data_pembayarans') {
+                                                            // Get data_pembayaran to find related order/prospect
+                                                            $dataPembayaran = \App\Models\DataPembayaran::find($appTransaction->source_id);
+                                                            if ($dataPembayaran && $dataPembayaran->order && $dataPembayaran->order->prospect) {
+                                                                $prospect = $dataPembayaran->order->prospect;
+                                                                $prospectName = $prospect->name_event ?: ($prospect->name_cpp ?: $prospect->name_cpw);
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @if($prospectName)
+                                                        <span class="text-blue-600"> • {{ $prospectName }}</span>
                                                     @endif
                                                 </div>
                                             </td>
@@ -321,19 +329,27 @@
                                             <td class="px-6 py-4 text-gray-600">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                                     {{ $transaction->source_table }}
-                                                    @if($transaction->source_table === 'expenses')
-                                                        @php
+                                                    @php
+                                                        $prospectName = null;
+                                                        
+                                                        if ($transaction->source_table === 'expenses') {
                                                             // Get expense to find related order/prospect
                                                             $expense = \App\Models\Expense::find($transaction->source_id);
-                                                            $prospectName = null;
                                                             if ($expense && $expense->order && $expense->order->prospect) {
                                                                 $prospect = $expense->order->prospect;
                                                                 $prospectName = $prospect->name_event ?: ($prospect->name_cpp ?: $prospect->name_cpw);
                                                             }
-                                                        @endphp
-                                                        @if($prospectName)
-                                                            <br><span class="text-blue-600 text-xs">{{ $prospectName }}</span>
-                                                        @endif
+                                                        } elseif ($transaction->source_table === 'data_pembayarans') {
+                                                            // Get data_pembayaran to find related order/prospect
+                                                            $dataPembayaran = \App\Models\DataPembayaran::find($transaction->source_id);
+                                                            if ($dataPembayaran && $dataPembayaran->order && $dataPembayaran->order->prospect) {
+                                                                $prospect = $dataPembayaran->order->prospect;
+                                                                $prospectName = $prospect->name_event ?: ($prospect->name_cpp ?: $prospect->name_cpw);
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @if($prospectName)
+                                                        <br><span class="text-blue-600 text-xs">{{ $prospectName }}</span>
                                                     @endif
                                                 </span>
                                             </td>
