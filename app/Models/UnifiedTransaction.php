@@ -49,16 +49,27 @@ class UnifiedTransaction extends Model
         $transactions = collect();
         
         // 1. DataPembayaran (Wedding Payments - Credit/Masuk)
-        $weddingPayments = DataPembayaran::where('payment_method_id', $paymentMethodId)
+        $weddingPayments = DataPembayaran::with(['order.prospect'])
+            ->where('payment_method_id', $paymentMethodId)
             ->when($startDate, fn($q) => $q->where('tgl_bayar', '>=', $startDate))
             ->when($endDate, fn($q) => $q->where('tgl_bayar', '<=', $endDate))
             ->whereNull('deleted_at')
             ->get()
             ->map(function ($payment) {
+                // Build description with customer name
+                $description = $payment->keterangan ?? 'Wedding Payment';
+                if ($payment->order && $payment->order->prospect) {
+                    $customerName = $payment->order->prospect->name_event ?: 
+                                  ($payment->order->prospect->name_cpp ?: $payment->order->prospect->name_cpw);
+                    if ($customerName) {
+                        $description = "Payment - {$customerName}" . ($payment->keterangan ? " ({$payment->keterangan})" : "");
+                    }
+                }
+                
                 return new self([
                     'payment_method_id' => $payment->payment_method_id,
                     'transaction_date' => $payment->tgl_bayar,
-                    'description' => $payment->keterangan ?? 'Wedding Payment',
+                    'description' => $description,
                     'debit_amount' => 0,
                     'credit_amount' => $payment->nominal,
                     'source_type' => 'wedding_payment',
@@ -98,7 +109,7 @@ class UnifiedTransaction extends Model
                 return new self([
                     'payment_method_id' => $expense->payment_method_id,
                     'transaction_date' => $expense->date_expense,
-                    'description' => $expense->keterangan ?? 'Wedding Expense',
+                    'description' => $expense->note ?? 'Wedding Expense',
                     'debit_amount' => $expense->amount,
                     'credit_amount' => 0,
                     'source_type' => 'wedding_expense',
@@ -118,7 +129,7 @@ class UnifiedTransaction extends Model
                 return new self([
                     'payment_method_id' => $expense->payment_method_id,
                     'transaction_date' => $expense->date_expense,
-                    'description' => 'Operational Expense',
+                    'description' => $expense->name ?? $expense->note ?? 'Operational Expense',
                     'debit_amount' => $expense->amount,
                     'credit_amount' => 0,
                     'source_type' => 'operational_expense',
@@ -138,7 +149,7 @@ class UnifiedTransaction extends Model
                 return new self([
                     'payment_method_id' => $expense->payment_method_id,
                     'transaction_date' => $expense->date_expense,
-                    'description' => 'Other Expense',
+                    'description' => $expense->name ?? $expense->note ?? 'Other Expense',
                     'debit_amount' => $expense->amount,
                     'credit_amount' => 0,
                     'source_type' => 'other_expense',
