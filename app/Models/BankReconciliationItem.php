@@ -26,7 +26,7 @@ class BankReconciliationItem extends Model
     // Main relationship to BankStatement (new integrated approach)
     public function bankStatement(): BelongsTo
     {
-        return $this->belongsTo(BankStatement::class, 'bank_reconciliation_id');
+        return $this->belongsTo(BankStatement::class, 'bank_reconciliation_id', 'id');
     }
 
     // Get the parent record - checks both BankStatement and legacy data

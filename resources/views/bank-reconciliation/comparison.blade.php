@@ -327,8 +327,10 @@
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 text-gray-600">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                    {{ $transaction->source_table }}
+                                                <div class="space-y-1">
+                                                    <span class="inline-flex items-center text-xs font-medium text-gray-800">
+                                                        {{ $transaction->source_table }}
+                                                    </span>
                                                     @php
                                                         $prospectName = null;
                                                         
@@ -349,9 +351,11 @@
                                                         }
                                                     @endphp
                                                     @if($prospectName)
-                                                        <br><span class="text-blue-600 text-xs">{{ $prospectName }}</span>
+                                                        <div class="text-blue-600 text-xs font-medium mt-1">
+                                                            {{ $prospectName }}
+                                                        </div>
                                                     @endif
-                                                </span>
+                                                </div>
                                             </td>
                                             <td class="px-6 py-4 text-center">
                                                 <button type="button" 
