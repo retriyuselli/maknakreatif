@@ -35,16 +35,15 @@ class BankReconciliationItemsRelationManager extends RelationManager
                     ->required()
                     ->maxLength(500)
                     ->rows(3)
-                    ->extraInputAttributes([
-                        'style' => 'font-family: monospace;'
-                    ])
-                    ->dehydrateStateUsing(function (?string $state): ?string {
+                    ->formatStateUsing(function (?string $state): ?string {
+                        // Clean excessive whitespace when loading data into form
                         if (!$state) return $state;
-                        
-                        // Clean up excessive whitespace but preserve intentional line breaks
-                        $cleaned = preg_replace('/[ \t]+/', ' ', $state); // Replace multiple spaces/tabs with single space
-                        $cleaned = preg_replace('/\n\s*\n/', "\n", $cleaned); // Remove empty lines
-                        return trim($cleaned);
+                        return preg_replace('/\s+/', ' ', trim($state));
+                    })
+                    ->dehydrateStateUsing(function (?string $state): ?string {
+                        // Clean excessive whitespace when saving
+                        if (!$state) return $state;
+                        return preg_replace('/\s+/', ' ', trim($state));
                     }),
                     
                 Forms\Components\TextInput::make('debit')
@@ -81,12 +80,9 @@ class BankReconciliationItemsRelationManager extends RelationManager
                     ->limit(50)
                     ->wrap()
                     ->formatStateUsing(function (string $state): string {
-                        return $this->formatDescription($state);
-                    })
-                    ->extraAttributes([
-                        'class' => 'fi-ta-text-item-description',
-                        'style' => 'white-space: pre-line; word-break: break-word; font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.875rem; line-height: 1.4;'
-                    ]),
+                        // Clean excessive whitespace for table display
+                        return preg_replace('/\s+/', ' ', trim($state));
+                    }),
                     
                 Tables\Columns\TextColumn::make('debit')
                     ->label('Debit')
@@ -163,35 +159,5 @@ class BankReconciliationItemsRelationManager extends RelationManager
             ->emptyStateHeading('Belum ada data rekonsiliasi')
             ->emptyStateDescription('Upload file Excel atau tambah item rekonsiliasi secara manual.')
             ->emptyStateIcon('heroicon-o-document-text');
-    }
-
-    /**
-     * Format description text by cleaning excessive whitespace and organizing content
-     */
-    private function formatDescription(string $description): string
-    {
-        // Remove excessive whitespace first
-        $cleaned = preg_replace('/\s+/', ' ', trim($description));
-        
-        // Try to identify patterns and format accordingly
-        // Pattern 1: "NUMBER NAME DETAILS" format
-        if (preg_match('/^(\d+)\s+([A-Z\s]+?)\s+([A-Z0-9\/\s]+)$/i', $cleaned, $matches)) {
-            $number = trim($matches[1]);
-            $name = trim($matches[2]);
-            $details = trim($matches[3]);
-            
-            return "{$number} {$name}\n{$details}";
-        }
-        
-        // Pattern 2: Long transaction codes or references at the end
-        if (preg_match('/^(.+?)\s+([A-Z0-9]{15,})$/i', $cleaned, $matches)) {
-            $mainText = trim($matches[1]);
-            $code = trim($matches[2]);
-            
-            return "{$mainText}\n{$code}";
-        }
-        
-        // Default: just clean excessive whitespace
-        return $cleaned;
     }
 }
