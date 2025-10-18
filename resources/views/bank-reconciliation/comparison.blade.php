@@ -220,8 +220,24 @@
                                         @php
                                             $appTransaction = $match['app_transaction'];
                                             $bankItem = $match['bank_item'];
-                                            $amount = $appTransaction->debit_amount ?: $appTransaction->credit_amount;
-                                            $isDebit = (bool) $appTransaction->debit_amount;
+                                            
+                                            // App amount - Fixed logic for proper amount selection
+                                            $appDebit = $appTransaction->debit_amount ?? 0;
+                                            $appCredit = $appTransaction->credit_amount ?? 0;
+                                            $appAmount = $appDebit > 0 ? $appDebit : $appCredit;
+                                            $appIsDebit = $appDebit > 0;
+                                            
+                                            // Bank amount - Debug info
+                                            $bankDebit = $bankItem->debit ?? 0;
+                                            $bankCredit = $bankItem->credit ?? 0;
+                                            $bankAmount = $bankDebit > 0 ? $bankDebit : $bankCredit;
+                                            $bankIsDebit = $bankDebit > 0;
+                                            
+                                            // Check if amounts match exactly
+                                            $amountsMatch = abs($appAmount - $bankAmount) < 0.01;
+                                            
+                                            // Debug: Check for zero values
+                                            $hasZeroIssue = ($bankDebit == 0 && $bankCredit == 0) || $bankAmount == 0;
                                         @endphp
                                         <tr class="hover:bg-gray-50">
                                             <td class="px-6 py-4 text-gray-900">
@@ -261,11 +277,46 @@
                                                 <div class="truncate" title="{{ $bankItem->description }}">
                                                     {{ Str::limit($bankItem->description, 50) }}
                                                 </div>
+                                                {{-- Show bank amount info with debug --}}
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    @if($hasZeroIssue)
+                                                        <div class="text-red-600 font-bold">🚨 DEBUG: Bank amount issue!</div>
+                                                        <div>Bank Debit: {{ $bankDebit }}</div>
+                                                        <div>Bank Credit: {{ $bankCredit }}</div>
+                                                        <div>Bank ID: {{ $bankItem->id ?? 'NULL' }}</div>
+                                                        <div>Raw Data: {{ json_encode($bankItem->toArray()) }}</div>
+                                                    @else
+                                                        Bank: {{ $bankIsDebit ? 'Debit' : 'Credit' }} 
+                                                        {{ $bankIsDebit ? '-' : '+' }}Rp {{ number_format($bankAmount, 0, ',', '.') }}
+                                                        @if(!$amountsMatch)
+                                                            <span class="text-orange-600 font-medium">⚠️ Diff</span>
+                                                        @endif
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td class="px-6 py-4 text-right">
-                                                <span class="font-medium {{ $isDebit ? 'text-red-600' : 'text-green-600' }}">
-                                                    {{ $isDebit ? '-' : '+' }}Rp {{ number_format($amount, 0, ',', '.') }}
-                                                </span>
+                                                <div class="space-y-1">
+                                                    {{-- App Amount --}}
+                                                    <div>
+                                                        <span class="text-xs text-gray-500">App:</span>
+                                                        <span class="font-medium {{ $appIsDebit ? 'text-red-600' : 'text-green-600' }}">
+                                                            {{ $appIsDebit ? '-' : '+' }}Rp {{ number_format($appAmount, 0, ',', '.') }}
+                                                        </span>
+                                                    </div>
+                                                    {{-- Bank Amount --}}
+                                                    <div>
+                                                        <span class="text-xs text-gray-500">Bank:</span>
+                                                        <span class="font-medium {{ $bankIsDebit ? 'text-red-600' : 'text-green-600' }}">
+                                                            {{ $bankIsDebit ? '-' : '+' }}Rp {{ number_format($bankAmount, 0, ',', '.') }}
+                                                        </span>
+                                                    </div>
+                                                    {{-- Match indicator --}}
+                                                    @if($amountsMatch)
+                                                        <div class="text-xs text-green-600">✓ Match</div>
+                                                    @else
+                                                        <div class="text-xs text-orange-600">⚠️ Diff: Rp {{ number_format(abs($appAmount - $bankAmount), 0, ',', '.') }}</div>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td class="px-6 py-4 text-center">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium

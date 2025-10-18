@@ -7,6 +7,7 @@ use App\Models\BankReconciliationItem;
 use App\Models\PaymentMethod;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class ReconciliationService
 {
@@ -53,6 +54,9 @@ class ReconciliationService
             $exactMatch = $this->findExactMatch($appTx, $bankItems, $matchedBankIds);
             
             if ($exactMatch) {
+                // DEBUG: Log exact matches for analysis
+                Log::info("EXACT_MATCH_FOUND: App({$appTx->description}) vs Bank({$exactMatch->description}) - AppCredit={$appTx->credit_amount}, BankCredit={$exactMatch->credit}");
+                
                 $results['matched'][] = [
                     'app_transaction' => $appTx,
                     'bank_item' => $exactMatch,
@@ -136,14 +140,32 @@ class ReconciliationService
             // Check date match
             $dateMatch = $appTx->transaction_date->isSameDay($bankItem->date);
 
-            // Check amount match
+            // Check amount match with zero validation
             $amountMatch = false;
             if ($appTx->is_income) {
                 // App transaction is income (credit), should match bank credit
-                $amountMatch = abs($appTx->credit_amount - $bankItem->credit) < 0.01;
+                $appAmount = $appTx->credit_amount ?? 0;
+                $bankAmount = $bankItem->credit ?? 0;
+                
+                // CRITICAL: Reject if either amount is zero
+                if ($appAmount <= 0 || $bankAmount <= 0) {
+                    Log::info("EXACT_MATCH_REJECTED: App={$appAmount}, Bank={$bankAmount}, Description: {$appTx->description}");
+                    return false;
+                }
+                
+                $amountMatch = abs($appAmount - $bankAmount) < 0.01;
             } else {
-                // App transaction is expense (debit), should match bank debit
-                $amountMatch = abs($appTx->debit_amount - $bankItem->debit) < 0.01;
+                // App transaction is expense (debit), should match bank debit  
+                $appAmount = $appTx->debit_amount ?? 0;
+                $bankAmount = $bankItem->debit ?? 0;
+                
+                // CRITICAL: Reject if either amount is zero
+                if ($appAmount <= 0 || $bankAmount <= 0) {
+                    Log::info("EXACT_MATCH_REJECTED: App={$appAmount}, Bank={$bankAmount}, Description: {$appTx->description}");
+                    return false;
+                }
+                
+                $amountMatch = abs($appAmount - $bankAmount) < 0.01;
             }
 
             return $dateMatch && $amountMatch;
@@ -182,26 +204,42 @@ class ReconciliationService
                 continue; // Too far apart
             }
 
-            // Amount match
+            // Amount match with zero protection
             $amountMatch = false;
             if ($appTx->is_income) {
-                $amountDiff = abs($appTx->credit_amount - $bankItem->credit);
+                $appAmount = $appTx->credit_amount ?? 0;
+                $bankAmount = $bankItem->credit ?? 0;
+                
+                // CRITICAL: Skip if either amount is zero or null
+                if ($appAmount <= 0 || $bankAmount <= 0) {
+                    continue; // Skip this bank item
+                }
+                
+                $amountDiff = abs($appAmount - $bankAmount);
                 if ($amountDiff < 0.01) {
                     $confidence += 40; // Exact amount
                     $criteria[] = 'exact_amount';
                     $amountMatch = true;
-                } elseif ($amountDiff / $appTx->credit_amount <= 0.02) {
+                } elseif ($amountDiff / $appAmount <= 0.02) {
                     $confidence += 25; // Within 2%
                     $criteria[] = 'close_amount';
                     $amountMatch = true;
                 }
             } else {
-                $amountDiff = abs($appTx->debit_amount - $bankItem->debit);
+                $appAmount = $appTx->debit_amount ?? 0;
+                $bankAmount = $bankItem->debit ?? 0;
+                
+                // CRITICAL: Skip if either amount is zero or null
+                if ($appAmount <= 0 || $bankAmount <= 0) {
+                    continue; // Skip this bank item
+                }
+                
+                $amountDiff = abs($appAmount - $bankAmount);
                 if ($amountDiff < 0.01) {
                     $confidence += 40; // Exact amount
                     $criteria[] = 'exact_amount';
                     $amountMatch = true;
-                } elseif ($amountDiff / $appTx->debit_amount <= 0.02) {
+                } elseif ($amountDiff / $appAmount <= 0.02) {
                     $confidence += 25; // Within 2%
                     $criteria[] = 'close_amount';
                     $amountMatch = true;
@@ -269,18 +307,27 @@ class ReconciliationService
      */
     private function getBankItemsForPaymentMethod(int $paymentMethodId, ?string $startDate, ?string $endDate): Collection
     {
-        // Get BankStatements for this PaymentMethod
+        // Get BankStatements for this PaymentMethod within the date range
         $bankStatements = \App\Models\BankStatement::where('payment_method_id', $paymentMethodId)
-            ->when($startDate, fn($q) => $q->where('period_start', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->where('period_end', '<=', $endDate))
+            ->when($startDate && $endDate, function($q) use ($startDate, $endDate) {
+                // Find statements that overlap with the requested date range
+                return $q->where(function($q) use ($startDate, $endDate) {
+                    $q->where('period_start', '<=', $endDate)
+                      ->where('period_end', '>=', $startDate);
+                });
+            })
+            ->when($startDate && !$endDate, fn($q) => $q->where('period_end', '>=', $startDate))
+            ->when(!$startDate && $endDate, fn($q) => $q->where('period_start', '<=', $endDate))
             ->pluck('id');
 
         // Get all BankReconciliationItems for these statements
-        return BankReconciliationItem::whereIn('bank_reconciliation_id', $bankStatements)
+        $bankItems = BankReconciliationItem::whereIn('bank_reconciliation_id', $bankStatements)
             ->when($startDate, fn($q) => $q->where('date', '>=', $startDate))
             ->when($endDate, fn($q) => $q->where('date', '<=', $endDate))
             ->orderBy('date')
             ->get();
+            
+        return $bankItems;
     }
 
     /**

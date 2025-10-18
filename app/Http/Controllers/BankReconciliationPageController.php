@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BankStatement;
 use App\Services\ReconciliationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class BankReconciliationPageController extends Controller
 {
@@ -29,6 +30,18 @@ class BankReconciliationPageController extends Controller
             $bankStatement->period_start->format('Y-m-d'),
             $bankStatement->period_end->format('Y-m-d')
         );
+
+        // DEBUG: Log the results for analysis
+        foreach ($reconciliationResults['matched'] as $match) {
+            $appTx = $match['app_transaction'];
+            $bankItem = $match['bank_item'];
+            
+            // Log problematic matches
+            if (($appTx->credit_amount == 0 && $bankItem->credit > 0) || 
+                ($appTx->debit_amount == 0 && $bankItem->debit > 0)) {
+                Log::warning("PROBLEMATIC_MATCH: App(C:{$appTx->credit_amount},D:{$appTx->debit_amount}) vs Bank(C:{$bankItem->credit},D:{$bankItem->debit}) - Confidence: {$match['confidence']}% - Description: {$appTx->description}");
+            }
+        }
 
         return view('bank-reconciliation.comparison', [
             'record' => $bankStatement,
