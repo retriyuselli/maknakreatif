@@ -104,7 +104,9 @@
                     {{ $order->prospect->venue ?? 'N/A' }} /
                     {{ $order->pax ?? 'N/A' }}
                     Pax</p>
-                <p class="text-gray-600 dark:text-white">Account Manager :
+                <p class="text-gray-600 dark:text-white">Account Manager : 
+                    {{ $order->user->name ?? 'N/A' }}</p>
+                <p class="text-gray-600 dark:text-white">Event Manager :
                     {{ $order->employee->name ?? 'N/A' }}</p>
             </div>
             <div>
