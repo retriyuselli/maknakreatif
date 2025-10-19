@@ -168,8 +168,8 @@ class BankStatementResource extends Resource
                             ->label('Tipe Sumber File')
                             ->options([
                                 'pdf' => 'PDF - File rekening koran PDF dari bank',
-                                'excel' => 'Excel - File spreadsheet (.xlsx, .xls)',
-                                'manual_input' => 'Input Manual - Entry data secara manual',
+                                // 'excel' => 'Excel - File spreadsheet (.xlsx, .xls)',
+                                // 'manual_input' => 'Input Manual - Entry data secara manual',
                             ])
                             ->required()
                             ->default('pdf')
@@ -410,6 +410,9 @@ class BankStatementResource extends Resource
                 Forms\Components\Hidden::make('uploaded_by')
                     ->default(fn() => Auth::id()),
 
+                Forms\Components\Hidden::make('last_edited_by')
+                    ->default(fn() => Auth::id()),
+
                 Forms\Components\Hidden::make('original_filename'),
                 Forms\Components\Hidden::make('reconciliation_original_filename'),
             ]);
@@ -491,17 +494,6 @@ class BankStatementResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state) => \App\Models\BankStatement::getSourceTypeOptions()[$state] ?? $state),
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'gray',
-                        'processing' => 'warning',
-                        'parsed' => 'success',
-                        'failed' => 'danger',
-                        default => 'secondary',
-                    })
-                    ->formatStateUsing(fn (string $state) => \App\Models\BankStatement::getStatusOptions()[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('reconciliation_status')
                     ->label('Status Rekonsiliasi')
@@ -513,8 +505,7 @@ class BankStatementResource extends Resource
                         'failed' => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state) => \App\Models\BankStatement::getReconciliationStatusOptions()[$state] ?? $state)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->formatStateUsing(fn (string $state) => \App\Models\BankStatement::getReconciliationStatusOptions()[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('total_records')
                     ->label('Total Records')
@@ -547,6 +538,30 @@ class BankStatementResource extends Resource
                         );
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                // Audit Trail Columns
+                Tables\Columns\TextColumn::make('lastEditedBy.name')
+                    ->label('Terakhir Diedit Oleh')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ?? 'System'),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Waktu Edit Terakhir')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->since()
+                    ->tooltip(fn ($record) => $record->updated_at?->format('d F Y H:i:s')),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat Pada')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->since()
+                    ->tooltip(fn ($record) => $record->created_at?->format('d F Y H:i:s')),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('payment_method_id')

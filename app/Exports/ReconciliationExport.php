@@ -147,7 +147,7 @@ class ReconciliationMatchedSheet implements FromArray, WithHeadings, WithStyles,
                 $bankItem->debit_amount ? number_format($bankItem->debit_amount, 0, ',', '.') : '',
                 $bankItem->credit_amount ? number_format($bankItem->credit_amount, 0, ',', '.') : '',
                 $match['confidence'] . '%',
-                implode(', ', $match['match_reasons'])
+                isset($match['match_criteria']) ? implode(', ', $match['match_criteria']) : (isset($match['match_reasons']) ? implode(', ', $match['match_reasons']) : 'N/A')
             ];
         }
 

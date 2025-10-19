@@ -9,9 +9,11 @@ use App\Listeners\CheckUserExpirationOnLogin;
 use App\Models\User;
 use App\Models\LeaveRequest;
 use App\Models\Order;
+use App\Models\BankStatement;
 use App\Observers\UserObserver;
 use App\Observers\LeaveRequestObserver;
 use App\Observers\OrderObserver;
+use App\Observers\BankStatementObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
         
         // Register Order Observer for tracking last edited by
         Order::observe(OrderObserver::class);
+        
+        // Register BankStatement Observer for tracking last edited by
+        BankStatement::observe(BankStatementObserver::class);
         
         // Register login event listener for daily expiration welcome notifications
         Event::listen(

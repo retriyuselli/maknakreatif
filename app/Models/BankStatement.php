@@ -38,6 +38,7 @@ class BankStatement extends Model
         'total_credit_reconciliation',
         'reconciliation_status',
         'uploaded_by',
+        'last_edited_by',
     ];
 
     protected $casts = [
@@ -61,6 +62,11 @@ class BankStatement extends Model
     public function uploadedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public function lastEditedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_edited_by');
     }
 
     public function bankReconciliationItems(): HasMany
