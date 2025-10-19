@@ -46,7 +46,8 @@ class BankTransaction extends Model
 
     public function matchedTransaction(): BelongsTo
     {
-        return $this->belongsTo(Transaction::class, 'matched_with_transaction_id');
+        // Return relationship to itself for now since Transaction model doesn't exist
+        return $this->belongsTo(BankTransaction::class, 'matched_with_transaction_id');
     }
 
     public static function getTransactionTypes(): array

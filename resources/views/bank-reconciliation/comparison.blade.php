@@ -233,8 +233,15 @@
                                             $bankAmount = $bankDebit > 0 ? $bankDebit : $bankCredit;
                                             $bankIsDebit = $bankDebit > 0;
                                             
+                                            // Ensure numeric types for accurate comparison
+                                            $appAmount = (float) $appAmount;
+                                            $bankAmount = (float) $bankAmount;
+                                            
                                             // Check if amounts match exactly
-                                            $amountsMatch = abs($appAmount - $bankAmount) < 0.01;
+                                            $difference = abs($appAmount - $bankAmount);
+                                            
+                                            // More explicit matching logic
+                                            $amountsMatch = ($difference === 0.0) || ($difference < 0.01);
                                             
                                             // Debug: Check for zero values
                                             $hasZeroIssue = ($bankDebit == 0 && $bankCredit == 0) || $bankAmount == 0;
@@ -311,10 +318,16 @@
                                                         </span>
                                                     </div>
                                                     {{-- Match indicator --}}
-                                                    @if($amountsMatch)
+                                                    @php
+                                                        // Ensure proper comparison with multiple fallback checks
+                                                        $actualDiff = abs((float)$appAmount - (float)$bankAmount);
+                                                        $isMatchCondition = ($actualDiff < 0.01) || (round($appAmount, 2) == round($bankAmount, 2));
+                                                    @endphp
+                                                    
+                                                    @if($isMatchCondition)
                                                         <div class="text-xs text-green-600">✓ Match</div>
                                                     @else
-                                                        <div class="text-xs text-orange-600">⚠️ Diff: Rp {{ number_format(abs($appAmount - $bankAmount), 0, ',', '.') }}</div>
+                                                        <div class="text-xs text-orange-600">⚠️ Diff: Rp {{ number_format($actualDiff, 0, ',', '.') }}</div>
                                                     @endif
                                                 </div>
                                             </td>
