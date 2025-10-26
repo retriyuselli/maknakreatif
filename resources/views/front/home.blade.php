@@ -5,11 +5,11 @@
 @section('content')
     <style>
         * {
-            font-family: 'Noto Sans', sans-serif !important;
+            font-family: 'Poppins', sans-serif !important;
         }
     </style>
 
-    <div class="min-h-screen bg-white" style="font-family: 'Noto Sans', sans-serif;">
+    <div class="min-h-screen bg-white" style="font-family: 'Poppins', sans-serif;">
         <!-- Navigation Header -->
         @include('front.header')
 
