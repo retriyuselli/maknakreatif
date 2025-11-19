@@ -100,16 +100,26 @@ class UnifiedTransaction extends Model
             });
 
         // 3. Expenses (Wedding Expenses - Debit/Keluar)
-        $weddingExpenses = Expense::where('payment_method_id', $paymentMethodId)
+        $weddingExpenses = Expense::with(['order.prospect'])
+            ->where('payment_method_id', $paymentMethodId)
             ->when($startDate, fn($q) => $q->where('date_expense', '>=', $startDate))
             ->when($endDate, fn($q) => $q->where('date_expense', '<=', $endDate))
             ->whereNull('deleted_at')
             ->get()
             ->map(function ($expense) {
+                $description = $expense->note ?? 'Wedding Expense';
+                if ($expense->order && $expense->order->prospect) {
+                    $customerName = $expense->order->prospect->name_event ?: 
+                                   ($expense->order->prospect->name_cpp ?: $expense->order->prospect->name_cpw);
+                    if ($customerName) {
+                        $description = "Expense - {$customerName}" . ($expense->note ? " ({$expense->note})" : "");
+                    }
+                }
+
                 return new self([
                     'payment_method_id' => $expense->payment_method_id,
                     'transaction_date' => $expense->date_expense,
-                    'description' => $expense->note ?? 'Wedding Expense',
+                    'description' => $description,
                     'debit_amount' => $expense->amount,
                     'credit_amount' => 0,
                     'source_type' => 'wedding_expense',

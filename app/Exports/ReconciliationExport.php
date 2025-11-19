@@ -7,6 +7,13 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\Conditional;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ReconciliationExport implements WithMultipleSheets
@@ -38,7 +45,7 @@ class ReconciliationExport implements WithMultipleSheets
     }
 }
 
-class ReconciliationSummarySheet implements FromArray, WithHeadings, WithStyles, WithTitle
+class ReconciliationSummarySheet implements FromArray, WithHeadings, WithStyles, WithTitle, WithEvents
 {
     protected $data;
 
@@ -65,12 +72,14 @@ class ReconciliationSummarySheet implements FromArray, WithHeadings, WithStyles,
         $statistics = $this->data['statistics'];
         $paymentMethod = $this->data['payment_method'];
         $period = $this->data['period'];
+        $start = \Carbon\Carbon::parse($period['start'])->format('d/m/Y');
+        $end = \Carbon\Carbon::parse($period['end'])->format('d/m/Y');
 
         return [
             ['Bank', $paymentMethod->bank_name],
             ['No. Rekening', $paymentMethod->no_rekening],
-            ['Periode Mulai', $period['start']],
-            ['Periode Akhir', $period['end']],
+            ['Periode Mulai', $start],
+            ['Periode Akhir', $end],
             ['', ''],
             ['STATISTIK REKONSILIASI', ''],
             ['Total Transaksi Aplikasi', $statistics['total_app_transactions']],
@@ -97,9 +106,21 @@ class ReconciliationSummarySheet implements FromArray, WithHeadings, WithStyles,
             12 => ['font' => ['bold' => true]],
         ];
     }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $rowCount = count($this->array()) + 1;
+                $sheet->freezePane('A2');
+                $sheet->setAutoFilter('A1:B' . $rowCount);
+            },
+        ];
+    }
 }
 
-class ReconciliationMatchedSheet implements FromArray, WithHeadings, WithStyles, WithTitle
+class ReconciliationMatchedSheet implements FromArray, WithHeadings, WithStyles, WithTitle, WithColumnFormatting, WithEvents
 {
     protected $matched;
 
@@ -138,15 +159,19 @@ class ReconciliationMatchedSheet implements FromArray, WithHeadings, WithStyles,
             $bankItem = $match['bank_item'];
             
             $data[] = [
-                $appTransaction->transaction_date,
+                ($appTransaction->transaction_date instanceof \Carbon\Carbon)
+                    ? $appTransaction->transaction_date->format('d/m/Y')
+                    : (string) $appTransaction->transaction_date,
                 $appTransaction->description,
-                $appTransaction->debit_amount ? number_format($appTransaction->debit_amount, 0, ',', '.') : '',
-                $appTransaction->credit_amount ? number_format($appTransaction->credit_amount, 0, ',', '.') : '',
-                $bankItem->transaction_date,
+                $appTransaction->debit_amount !== null ? (float) $appTransaction->debit_amount : null,
+                $appTransaction->credit_amount !== null ? (float) $appTransaction->credit_amount : null,
+                ($bankItem->date instanceof \Carbon\Carbon)
+                    ? $bankItem->date->format('d/m/Y')
+                    : (string) $bankItem->date,
                 $bankItem->description,
-                $bankItem->debit_amount ? number_format($bankItem->debit_amount, 0, ',', '.') : '',
-                $bankItem->credit_amount ? number_format($bankItem->credit_amount, 0, ',', '.') : '',
-                $match['confidence'] . '%',
+                $bankItem->debit !== null ? (float) $bankItem->debit : null,
+                $bankItem->credit !== null ? (float) $bankItem->credit : null,
+                isset($match['confidence']) ? ((float) $match['confidence'] / 100) : null,
                 isset($match['match_criteria']) ? implode(', ', $match['match_criteria']) : (isset($match['match_reasons']) ? implode(', ', $match['match_reasons']) : 'N/A')
             ];
         }
@@ -160,9 +185,57 @@ class ReconciliationMatchedSheet implements FromArray, WithHeadings, WithStyles,
             1 => ['font' => ['bold' => true]],
         ];
     }
+
+    public function columnFormats(): array
+    {
+        return [
+            'C' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'G' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'I' => NumberFormat::FORMAT_PERCENTAGE_00,
+        ];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $rowCount = count($this->matched) + 1;
+                $sheet->freezePane('A2');
+                $sheet->setAutoFilter('A1:J' . $rowCount);
+                $range = 'I2:I' . $rowCount;
+
+                $green = new Conditional();
+                $green->setConditionType(Conditional::CONDITION_CELLIS)
+                    ->setOperatorType(Conditional::OPERATOR_GREATERTHANOREQUAL)
+                    ->addCondition('0.9');
+                $green->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('C6EFCE');
+                $green->getStyle()->getFont()->getColor()->setARGB('006100');
+
+                $yellow = new Conditional();
+                $yellow->setConditionType(Conditional::CONDITION_CELLIS)
+                    ->setOperatorType(Conditional::OPERATOR_BETWEEN)
+                    ->addCondition('0.75')
+                    ->addCondition('0.9');
+                $yellow->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFEB9C');
+                $yellow->getStyle()->getFont()->getColor()->setARGB('9C6500');
+
+                $red = new Conditional();
+                $red->setConditionType(Conditional::CONDITION_CELLIS)
+                    ->setOperatorType(Conditional::OPERATOR_LESSTHAN)
+                    ->addCondition('0.75');
+                $red->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFC7CE');
+                $red->getStyle()->getFont()->getColor()->setARGB('9C0006');
+
+                $sheet->getStyle($range)->setConditionalStyles([$green, $yellow, $red]);
+            },
+        ];
+    }
 }
 
-class ReconciliationUnmatchedAppSheet implements FromArray, WithHeadings, WithStyles, WithTitle
+class ReconciliationUnmatchedAppSheet implements FromArray, WithHeadings, WithStyles, WithTitle, WithColumnFormatting, WithEvents
 {
     protected $unmatched;
 
@@ -194,10 +267,12 @@ class ReconciliationUnmatchedAppSheet implements FromArray, WithHeadings, WithSt
         
         foreach ($this->unmatched as $transaction) {
             $data[] = [
-                $transaction->transaction_date,
+                ($transaction->transaction_date instanceof \Carbon\Carbon)
+                    ? $transaction->transaction_date->format('d/m/Y')
+                    : (string) $transaction->transaction_date,
                 $transaction->description,
-                $transaction->debit_amount ? number_format($transaction->debit_amount, 0, ',', '.') : '',
-                $transaction->credit_amount ? number_format($transaction->credit_amount, 0, ',', '.') : '',
+                $transaction->debit_amount !== null ? (float) $transaction->debit_amount : null,
+                $transaction->credit_amount !== null ? (float) $transaction->credit_amount : null,
                 $transaction->source_table,
                 $transaction->source_id
             ];
@@ -212,9 +287,29 @@ class ReconciliationUnmatchedAppSheet implements FromArray, WithHeadings, WithSt
             1 => ['font' => ['bold' => true]],
         ];
     }
+
+    public function columnFormats(): array
+    {
+        return [
+            'C' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+        ];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $rowCount = count($this->unmatched) + 1;
+                $sheet->freezePane('A2');
+                $sheet->setAutoFilter('A1:F' . $rowCount);
+            },
+        ];
+    }
 }
 
-class ReconciliationUnmatchedBankSheet implements FromArray, WithHeadings, WithStyles, WithTitle
+class ReconciliationUnmatchedBankSheet implements FromArray, WithHeadings, WithStyles, WithTitle, WithColumnFormatting, WithEvents
 {
     protected $unmatched;
 
@@ -245,10 +340,12 @@ class ReconciliationUnmatchedBankSheet implements FromArray, WithHeadings, WithS
         
         foreach ($this->unmatched as $item) {
             $data[] = [
-                $item->transaction_date,
+                ($item->date instanceof \Carbon\Carbon)
+                    ? $item->date->format('d/m/Y')
+                    : (string) $item->date,
                 $item->description,
-                $item->debit_amount ? number_format($item->debit_amount, 0, ',', '.') : '',
-                $item->credit_amount ? number_format($item->credit_amount, 0, ',', '.') : '',
+                $item->debit !== null ? (float) $item->debit : null,
+                $item->credit !== null ? (float) $item->credit : null,
                 $item->id
             ];
         }
@@ -260,6 +357,26 @@ class ReconciliationUnmatchedBankSheet implements FromArray, WithHeadings, WithS
     {
         return [
             1 => ['font' => ['bold' => true]],
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'C' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+        ];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $rowCount = count($this->unmatched) + 1;
+                $sheet->freezePane('A2');
+                $sheet->setAutoFilter('A1:E' . $rowCount);
+            },
         ];
     }
 }
