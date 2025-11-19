@@ -362,6 +362,7 @@ class BankStatementResource extends Resource
                             ->maxSize(10240) // 10MB
                             ->helperText('Upload file Excel dengan format: Tanggal, Keterangan, Debit, Credit')
                             ->live()
+                            ->required(fn (string $operation): bool => $operation === 'create')
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if ($state) {
                                     // Set reconciliation original filename when file is uploaded
@@ -710,6 +711,22 @@ class BankStatementResource extends Resource
     protected static function mutateFormDataBeforeCreate(array $data): array
     {
         $data['uploaded_at'] = Carbon::now();
+        if (!isset($data['total_records'])) {
+            $data['total_records'] = 0;
+        }
+        if (!isset($data['reconciliation_status'])) {
+            $data['reconciliation_status'] = 'uploaded';
+        }
+        if (!empty($data['file_path']) && empty($data['original_filename'])) {
+            $data['original_filename'] = basename($data['file_path']);
+        }
+        foreach (['total_debit_reconciliation', 'total_credit_reconciliation'] as $field) {
+            if (isset($data[$field]) && is_string($data[$field])) {
+                $data[$field] = (float) str_replace(['.', ',', ' ', 'IDR'], '', $data[$field]) ?: 0;
+            } elseif (!isset($data[$field])) {
+                $data[$field] = 0;
+            }
+        }
         return $data;
     }
 
